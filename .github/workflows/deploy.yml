@@ -1,0 +1,69 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: http://95.158.64.196
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='frontend/node_modules' \
+            --exclude='frontend/dist' \
+            --exclude='frontend/.angular' \
+            --exclude='backend/.venv' \
+            --exclude='backend/__pycache__' \
+            --exclude='backend/app/__pycache__' \
+            --exclude='backend/app/graph/__pycache__' \
+            -czf search-agent.tar.gz .
+
+      - name: Prepare SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s" "$DEPLOY_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 2222 -H 95.158.64.196 >> ~/.ssh/known_hosts
+
+      - name: Upload bundle
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: scp -P 2222 search-agent.tar.gz "$DEPLOY_USER@95.158.64.196:/tmp/search-agent.tar.gz"
+
+      - name: Deploy on server
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          TARGET_PATH="${DEPLOY_PATH:-/opt/search-agent}"
+          ssh -p 2222 "$DEPLOY_USER@95.158.64.196" "TARGET_PATH='$TARGET_PATH' bash -s" <<'EOF'
+          set -e
+          if [ -z "$TARGET_PATH" ] || [ "$TARGET_PATH" = "/" ]; then
+            echo "Invalid TARGET_PATH: $TARGET_PATH"
+            exit 1
+          fi
+          mkdir -p "$TARGET_PATH"
+          find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          tar -xzf /tmp/search-agent.tar.gz -C "$TARGET_PATH"
+          cd "$TARGET_PATH"
+          if docker compose version >/dev/null 2>&1; then
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+          else
+            docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
+          fi
+          rm -f /tmp/search-agent.tar.gz
+          EOF
