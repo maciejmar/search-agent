@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: http://95.158.64.196
+      url: http://search-agent.webaby.io
     steps:
       - name: Checkout
         uses: actions/checkout@v4
