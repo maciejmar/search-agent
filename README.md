@@ -22,9 +22,21 @@ Po starcie:
 docker-compose -f docker-compose.prod.yml up --build -d
 ```
 
-W produkcji frontend jest serwowany przez kontenerowy `nginx` na `127.0.0.1:8080`, a backend przez `uvicorn` na `127.0.0.1:8001`. Publiczna domena jest obslugiwana przez hostowy `nginx` z `sites-available`.
+W produkcji frontend jest serwowany przez kontenerowy `nginx` na `127.0.0.1:8082`, a backend przez `uvicorn` na `127.0.0.1:8003`. Publiczna domena jest obslugiwana przez hostowy `nginx` z `sites-available`.
 
 Docelowy adres aplikacji to `https://search-agent.webaby.io`.
+
+## Dlaczego porty 8082 i 8003
+
+Te porty zostaly wybrane jako wolne na podstawie listingu z serwera, ktory pokazal konflikt z `office-assistant` na `127.0.0.1:8080` i `127.0.0.1:8001`.
+
+Przed deployem warto to jeszcze potwierdzic na serwerze:
+
+```bash
+sudo ss -ltnp | grep -E '8082|8003'
+```
+
+Jesli wynik jest pusty, porty sa wolne.
 
 ## Host nginx na serwerze
 
@@ -35,8 +47,8 @@ Gotowe pliki do `sites-available` sa w repo:
 
 Ten uklad dziala tak:
 
-- `location /` -> `http://127.0.0.1:8080`
-- `location /api/` -> `http://127.0.0.1:8001`
+- `location /` -> `http://127.0.0.1:8082`
+- `location /api/` -> `http://127.0.0.1:8003`
 
 ### Krok 1: uruchom wariant bez SSL
 
@@ -57,42 +69,7 @@ sudo certbot --nginx -d search-agent.webaby.io
 
 ### Krok 3: automatyczne odnawianie certyfikatu
 
-W repo sa gotowe pliki:
-
-- `deploy/certbot/certbot-renew-nginx.sh`
-- `deploy/certbot/certbot-renew.service`
-- `deploy/certbot/certbot-renew.timer`
-
-Instalacja na serwerze:
-
-```bash
-sudo cp /opt/search-agent/deploy/certbot/certbot-renew.service /etc/systemd/system/certbot-renew.service
-sudo cp /opt/search-agent/deploy/certbot/certbot-renew.timer /etc/systemd/system/certbot-renew.timer
-sudo systemctl daemon-reload
-sudo systemctl enable --now certbot-renew.timer
-sudo systemctl status certbot-renew.timer
-```
-
-Timer odpala odnowienie dwa razy dziennie i po skutecznym odnowieniu robi `systemctl reload nginx`.
-
-Reczne sprawdzenie:
-
-```bash
-sudo systemctl start certbot-renew.service
-sudo journalctl -u certbot-renew.service -n 50 --no-pager
-```
-
-Jesli wolisz cron zamiast systemd timera, mozesz uzyc:
-
-```bash
-sudo crontab -e
-```
-
-i dodac:
-
-```cron
-0 3,15 * * * certbot renew --quiet --deploy-hook "systemctl reload nginx"
-```
+Certbot na tym serwerze ma juz aktywny `certbot.timer`, wiec nie trzeba dokladac drugiego timera, jesli `systemctl status certbot.timer` pokazuje stan `active`.
 
 ## GitHub Actions
 
@@ -119,11 +96,11 @@ W `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets` dodaj:
 - dostep SSH na `95.158.64.196:2222`
 - rekord DNS `search-agent.webaby.io -> 95.158.64.196`
 - wolne porty `80` i `443` dla hostowego `nginx`
+- wolne lokalne porty `127.0.0.1:8082` i `127.0.0.1:8003`
 
 ## Szybka weryfikacja po deployu
 
-- otworz `http://search-agent.webaby.io` przed SSL
-- po certyfikacie otworz `https://search-agent.webaby.io`
-- sprawdz backend: `http://search-agent.webaby.io/api/standings`
-- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8080`
-- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8001/api/standings`
+- otworz `https://search-agent.webaby.io`
+- sprawdz backend: `https://search-agent.webaby.io/api/standings`
+- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8082`
+- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8003/api/standings`
