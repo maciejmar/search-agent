@@ -34,7 +34,7 @@ def usage_dashboard() -> UsageDashboard:
 @app.post('/api/analyze', response_model=AnalysisResponse)
 async def analyze(files: list[UploadFile] = File(...)) -> AnalysisResponse:
     if not files:
-        raise HTTPException(status_code=400, detail='Brak plikow do analizy.')
+        raise HTTPException(status_code=400, detail='Brak plik\u00f3w do analizy.')
 
     extracted_documents = []
     for file in files:
@@ -49,6 +49,6 @@ async def analyze(files: list[UploadFile] = File(...)) -> AnalysisResponse:
             await file.close()
 
     if not extracted_documents:
-        raise HTTPException(status_code=400, detail='Nie przeslano zadnych niepustych plikow.')
+        raise HTTPException(status_code=400, detail='Nie przes\u0142ano \u017cadnych niepustych plik\u00f3w.')
 
     return analyze_with_graph(extracted_documents)

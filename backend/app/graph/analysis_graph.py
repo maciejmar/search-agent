@@ -35,7 +35,7 @@ def run_analysis(state: AnalysisState) -> AnalysisState:
             0,
             GlobalIssue(
                 severity='warning',
-                message=f'Analiza OpenAI API byla niedostepna, uzyto fallbacku heurystycznego: {raised_error.__class__.__name__}.',
+                message=f'Analiza OpenAI API by\u0142a niedost\u0119pna, u\u017cyto fallbacku heurystycznego: {raised_error.__class__.__name__}.',
                 documents=[document.name for document in state['documents']],
             ),
         )
@@ -88,8 +88,8 @@ def _build_summary(documents: list[UploadedDocument], parties, analysis_mode: st
 
     inconsistent = sum(1 for party in parties if party.issues)
     if inconsistent:
-        return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Wykryto niespojnosci dla {inconsistent} stron.'
-    return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Nie wykryto niespojnosci w znalezionych danych stron.'
+        return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Wykryto niesp\u00f3jno\u015bci dla {inconsistent} stron.'
+    return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Nie wykryto niesp\u00f3jno\u015bci w znalezionych danych stron.'
 
 
 

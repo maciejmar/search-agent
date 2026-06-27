@@ -1,4 +1,4 @@
-﻿import re
+import re
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
@@ -8,24 +8,24 @@ from app.schemas import FieldVariant, GlobalIssue, PartyFieldResult, PartyIssue,
 from app.services.document_reader import ExtractedDocument
 
 
-UPPER = 'A-ZĄĆĘŁŃÓŚŹŻ'
-LOWER = 'a-ząćęłńóśźż'
+UPPER = 'A-Z\u0104\u0106\u0118\u0141\u0143\u00d3\u015a\u0179\u017b'
+LOWER = 'a-z\u0105\u0107\u0119\u0142\u0144\u00f3\u015b\u017a\u017c'
 ORG_HINTS = ('nip', 'regon', 'krs', 'siedzib')
 PERSON_STOPWORDS = {
     'Rzeczypospolitej', 'Polskiej', 'Notarialnego', 'Aktu', 'Repertorium', 'Gminie',
     'Miasta', 'Sadu', 'Rejonowego', 'Wydzial', 'Kodeksu', 'Wojewodztwa', 'Panstwa'
 }
 PERSON_PREFIXES = {'pan', 'pani', 'dalej', 'zwany', 'zwana', 'stawil', 'stawila', 'malzonkowie', 'przed'}
-NAME_INFLECTION_SUFFIXES = ('owego', 'owej', 'skiego', 'skiej', 'skiemu', 'owie', 'iem', 'owi', 'ego', 'emu', 'ach', 'ami', 'owa', 'owe', 'owy', 'ska', 'ski', 'cka', 'cki', 'dzka', 'dzki', 'ą', 'ę', 'a', 'e', 'y', 'u', 'i')
-FIRST_NAME_SUFFIXES = ('owi', 'ego', 'emu', 'iem', 'em', 'ie', 'e', 'ę', 'ą', 'a', 'u', 'y')
+NAME_INFLECTION_SUFFIXES = ('owego', 'owej', 'skiego', 'skiej', 'skiemu', 'owie', 'iem', 'owi', 'ego', 'emu', 'ach', 'ami', 'owa', 'owe', 'owy', 'ska', 'ski', 'cka', 'cki', 'dzka', 'dzki', '\u0105', '\u0119', 'a', 'e', 'y', 'u', 'i')
+FIRST_NAME_SUFFIXES = ('owi', 'ego', 'emu', 'iem', 'em', 'ie', 'e', '\u0119', '\u0105', 'a', 'u', 'y')
 
 FIELD_PATTERNS = {
     'pesel': r'PESEL(?: nr)?[: ]+([0-9]{11})',
     'nip': r'NIP[: ]+([0-9]{10})',
     'regon': r'REGON[: ]+([0-9]{9,14})',
     'krs': r'KRS[: ]+([0-9]{10})',
-    'dowod': r'(?:dow[oó]d(?:u)? osobist(?:y|ego)|seria i numer dowodu osobistego|nr dowodu osobistego)[: ]+([A-Z]{2,3}\s?[0-9]{5,6})',
-    'adres': r'(?:adres(?: zamieszkania| siedziby)?|zamieszk[ał]y(?:a)?(?: pod adresem)?|z siedzib[aą] w)[: ]+([^.;\n]{10,140})',
+    'dowod': r'(?:dow[o\u00f3]d(?:u)? osobist(?:y|ego)|seria i numer dowodu osobistego|nr dowodu osobistego)[: ]+([A-Z]{2,3}\\s?[0-9]{5,6})',
+    'adres': r'(?:adres(?: zamieszkania| siedziby)?|zamieszk[a\u0142]y(?:a)?(?: pod adresem)?|z siedzib[a\u0105] w)[: ]+([^.;\\n]{10,140})',
 }
 
 PERSON_NAME_RE = re.compile(rf'\b([{UPPER}][{LOWER}]+(?:-[{UPPER}][{LOWER}]+)?\s+[{UPPER}][{LOWER}]+(?:-[{UPPER}][{LOWER}]+)?(?:\s+[{UPPER}][{LOWER}]+(?:-[{UPPER}][{LOWER}]+)?)?)\b')
@@ -71,7 +71,7 @@ def analyze_documents(documents: list[ExtractedDocument]) -> tuple[list[PartyRes
         occurrences.extend(_extract_occurrences(document, profiles))
 
     if not occurrences and not profiles:
-        return [], [GlobalIssue(severity='warning', message='Nie znaleziono danych stron ani oznaczonych identyfikatorow w przeslanych dokumentach.', documents=[doc.name for doc in documents])]
+        return [], [GlobalIssue(severity='warning', message='Nie znaleziono danych stron ani oznaczonych identyfikator\u00f3w w przes\u0142anych dokumentach.', documents=[doc.name for doc in documents])]
 
     parties = _build_parties(occurrences, profiles, documents)
     global_issues = _build_global_issues(parties)
@@ -227,7 +227,7 @@ def _build_parties(occurrences: Iterable[FieldOccurrence], profiles: list[PartyP
                 issues.append(PartyIssue(
                     field=field_name,
                     severity='error',
-                    message=f'Wykryto rozne wartosci pola {field_name} dla tej samej strony.',
+                    message=f'Wykryto r\u00f3\u017cne warto\u015bci pola {field_name} dla tej samej strony.',
                     variants=[variant.value for variant in variants],
                     documents=sorted({document for variant in variants for document in variant.documents}),
                 ))
@@ -298,7 +298,7 @@ def _build_name_consistency(profile: PartyProfile, documents: list[ExtractedDocu
     issue = PartyIssue(
         field='name',
         severity='error',
-        message='Wykryto rozne warianty imienia i nazwiska tej samej strony.',
+        message='Wykryto r\u00f3\u017cne warianty imienia i nazwiska tej samej strony.',
         variants=[variant.value for variant in field_variants],
         documents=sorted({document_name for variant in field_variants for document_name in variant.documents}),
     )
@@ -342,13 +342,13 @@ def _build_global_issues(parties: list[PartyResult]) -> list[GlobalIssue]:
     if conflicting:
         issues.append(GlobalIssue(
             severity='warning',
-            message=f'Wykryto niespojnosci danych dla {len(conflicting)} stron.',
+            message=f'Wykryto niesp\u00f3jno\u015bci danych dla {len(conflicting)} stron.',
             documents=sorted({document for party in conflicting for document in party.documents}),
         ))
     else:
         issues.append(GlobalIssue(
             severity='info',
-            message='Nie wykryto niespojnosci w oznaczonych identyfikatorach stron.',
+            message='Nie wykryto niesp\u00f3jno\u015bci w oznaczonych identyfikatorach stron.',
             documents=sorted({document for party in parties for document in party.documents}),
         ))
     return issues

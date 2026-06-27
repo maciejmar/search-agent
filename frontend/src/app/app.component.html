@@ -2,10 +2,10 @@
   <section class="hero">
     <div class="hero__copy">
       <p class="eyebrow">Analiza aktu notarialnego</p>
-      <h1>Sprawdz zgodnosc danych stron w dokumentach</h1>
+      <h1>Sprawd&#378; zgodno&#347;&#263; danych stron w dokumentach</h1>
       <p class="lead">
-        Wrzuc jeden lub kilka dokumentow, a backend przeanalizuje wskazane dane stron i wykryje miejsca,
-        w ktorych PESEL, NIP, KRS, numer dowodu lub adres przestaja byc spojne.
+        Wrzu&#263; jeden lub kilka dokument&oacute;w, a backend przeanalizuje wskazane dane stron i wykryje miejsca,
+        w kt&oacute;rych PESEL, NIP, KRS, numer dowodu lub adres przestaj&#261; by&#263; sp&oacute;jne.
       </p>
     </div>
 
@@ -15,14 +15,14 @@
           Analiza
         </button>
         <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
-          Zuzycie API
+          Zu&#380;ycie API
         </button>
       </div>
 
       <label class="upload-zone" for="file-upload">
         <input id="file-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt" (change)="onFilesSelected($event)" />
         <span class="upload-title">Dodaj dokumenty</span>
-        <span class="upload-subtitle">Obslugiwane formaty: PDF, DOC, DOCX, TXT</span>
+        <span class="upload-subtitle">Obs&#322;ugiwane formaty: PDF, DOC, DOCX, TXT</span>
       </label>
 
       @if (selectedFiles.length) {
@@ -33,7 +33,7 @@
                 <strong>{{ file.name }}</strong>
                 <span>{{ file.size }} B</span>
               </div>
-              <button type="button" (click)="removeFile($index)">Usun</button>
+              <button type="button" (click)="removeFile($index)">Usu&#324;</button>
             </div>
           }
         </div>
@@ -43,7 +43,7 @@
         @if (isSubmitting) {
           Analizowanie...
         } @else {
-          Analizuj zgodnosc danych
+          Analizuj zgodno&#347;&#263; danych
         }
       </button>
 
@@ -127,12 +127,12 @@
                     <div class="feedback feedback--error">
                       <strong>{{ issue.message }}</strong>
                       <span>Pole: {{ issue.field }}</span>
-                      <span>Wartosci: {{ issue.variants.join(' | ') }}</span>
+                      <span>Warto&#347;ci: {{ issue.variants.join(' | ') }}</span>
                     </div>
                   }
                 </div>
               } @else {
-                <div class="feedback feedback--success">Nie wykryto niespojnosci dla tej strony.</div>
+                <div class="feedback feedback--success">Nie wykryto niesp&oacute;jno&#347;ci dla tej strony.</div>
               }
 
               <div class="field-table">
@@ -141,7 +141,7 @@
                     <div class="field-row__meta">
                       <strong>{{ field.field }}</strong>
                       <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
-                        {{ field.consistent ? 'spojne' : 'rozne wartosci' }}
+                        {{ field.consistent ? 'sp&oacute;jne' : 'r&oacute;&#380;ne warto&#347;ci' }}
                       </span>
                     </div>
                     <div class="variant-list">
@@ -149,7 +149,7 @@
                         <div class="variant-card">
                           <strong>{{ variant.value }}</strong>
                           <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
-                          <span>Wystapienia: {{ variant.occurrences }}</span>
+                          <span>Wyst&#261;pienia: {{ variant.occurrences }}</span>
                         </div>
                       }
                     </div>
@@ -161,15 +161,15 @@
         </div>
 
         @if (!analysisResult.parties.length) {
-          <div class="empty-state">Nie znaleziono danych stron, ktore mozna bylo porownac.</div>
+          <div class="empty-state">Nie znaleziono danych stron, kt&oacute;re mo&#380;na by&#322;o por&oacute;wna&#263;.</div>
         }
       </section>
     }
   } @else {
     <section class="results">
       <div class="results__summary">
-        <h2>Zuzycie API</h2>
-        <p>Podglad ostatnich wywolan modelu, tokenow i szacowanego kosztu.</p>
+        <h2>Zu&#380;ycie API</h2>
+        <p>Podgl&#261;d ostatnich wywo&#322;a&#324; modelu, token&oacute;w i szacowanego kosztu.</p>
       </div>
 
       @if (usageErrorMessage) {
@@ -177,11 +177,11 @@
       }
 
       @if (isLoadingUsage) {
-        <div class="empty-state">Ladowanie statystyk API...</div>
+        <div class="empty-state">&#321;adowanie statystyk API...</div>
       } @else if (usageDashboard) {
         <section class="usage-strip usage-strip--dashboard">
           <article class="usage-stat">
-            <span>Liczba wywolan</span>
+            <span>Liczba wywo&#322;a&#324;</span>
             <strong>{{ usageDashboard.totals.requestCount }}</strong>
           </article>
           <article class="usage-stat">
@@ -197,7 +197,7 @@
             <strong>{{ usageDashboard.totals.totalCachedInputTokens }}</strong>
           </article>
           <article class="usage-stat">
-            <span>Laczny koszt USD</span>
+            <span>&#321;&#261;czny koszt USD</span>
             <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }}</strong>
           </article>
         </section>
@@ -227,7 +227,7 @@
             }
           </div>
         } @else {
-          <div class="empty-state">Brak zapisanej historii wywolan API.</div>
+          <div class="empty-state">Brak zapisanej historii wywo&#322;a&#324; API.</div>
         }
       }
     </section>

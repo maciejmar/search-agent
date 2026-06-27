@@ -157,7 +157,7 @@ export class AppComponent {
       error: (error: HttpErrorResponse) => {
         this.errorMessage = typeof error.error?.detail === 'string'
           ? error.error.detail
-          : 'Nie udalo sie przeanalizowac dokumentow.';
+          : 'Nie uda\u0142o si\u0119 przeanalizowa\u0107 dokument\u00f3w.';
         this.isSubmitting = false;
       }
     });
@@ -172,7 +172,7 @@ export class AppComponent {
         this.isLoadingUsage = false;
       },
       error: () => {
-        this.usageErrorMessage = 'Nie udalo sie pobrac statystyk zuzycia API.';
+        this.usageErrorMessage = 'Nie uda\u0142o si\u0119 pobra\u0107 statystyk zu\u017cycia API.';
         this.isLoadingUsage = false;
       }
     });
