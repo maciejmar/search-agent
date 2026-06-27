@@ -66,6 +66,14 @@ h1 {
   color: #356c27;
 }
 
+.empty-state {
+  margin: 0 24px 24px;
+  padding: 20px 24px 28px;
+  color: #6a735e;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -150,6 +158,11 @@ h1 {
 
   .notice {
     margin: 0 16px 12px;
+  }
+
+  .empty-state {
+    margin: 0 16px 20px;
+    padding: 12px 16px 20px;
   }
 
   .standings thead th,

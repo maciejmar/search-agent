@@ -16,10 +16,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should expose fallback standings', () => {
+  it('should start without local fallback standings', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.groupName).toBe('Grupa H');
-    expect(app.fallbackStandings.length).toBe(4);
+    expect(app.groupName).toBe('Tabela');
+    expect(app.standings.length).toBe(0);
   });
 });
