@@ -66,7 +66,6 @@ sudo systemctl reload nginx
 ```bash
 sudo certbot --nginx -d search-agent.webaby.io
 ```
-
 ### Krok 3: automatyczne odnawianie certyfikatu
 
 Certbot na tym serwerze ma juz aktywny `certbot.timer`, wiec nie trzeba dokladac drugiego timera, jesli `systemctl status certbot.timer` pokazuje stan `active`.
