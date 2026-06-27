@@ -77,6 +77,6 @@ Workflow deploy jest przypiety do environment `production`, ale sekrety moga byc
 
 ### Szybka weryfikacja po deployu
 
-- otworz `http://95.158.64.196`
+- otwórz `http://95.158.64.196`
 - sprawdz backend: `http://95.158.64.196/api/standings`
 - jesli cos nie dziala, sprawdz logi workflow w zakladce `Actions`
