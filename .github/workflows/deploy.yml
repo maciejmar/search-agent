@@ -49,9 +49,11 @@ jobs:
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
-          TARGET_PATH="${DEPLOY_PATH:-/opt/search-agent}"
-          ssh -i ~/.ssh/id_rsa -p 2222 "$DEPLOY_USER@95.158.64.196" "TARGET_PATH='$TARGET_PATH' bash -s" <<'EOF'
+          TARGET_PATH="${DEPLOY_PATH:-/home/webaby/search-agent}"
+          ssh -i ~/.ssh/id_rsa -p 2222 "$DEPLOY_USER@95.158.64.196" "TARGET_PATH='$TARGET_PATH' OPENAI_API_KEY='$OPENAI_API_KEY' OPENAI_MODEL='$OPENAI_MODEL' bash -s" <<'EOF'
           set -e
           if [ -z "$TARGET_PATH" ] || [ "$TARGET_PATH" = "/" ]; then
             echo "Invalid TARGET_PATH: $TARGET_PATH"
@@ -61,6 +63,10 @@ jobs:
           find "$TARGET_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
           tar -xzf /tmp/search-agent.tar.gz -C "$TARGET_PATH"
           cd "$TARGET_PATH"
+          {
+            printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
+            printf 'OPENAI_MODEL=%s\n' "${OPENAI_MODEL:-gpt-4o-mini}"
+          } > .env
           if docker compose version >/dev/null 2>&1; then
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
           else

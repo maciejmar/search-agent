@@ -16,6 +16,16 @@ Po starcie:
 - frontend: `http://localhost:4200`
 - backend: `http://localhost:8000`
 
+Backend probuje analizowac dokumenty przez OpenAI API modelem `gpt-4o-mini`.
+Jesli `OPENAI_API_KEY` nie jest ustawiony albo API jest niedostepne, aplikacja spada do fallbacku heurystycznego i zwraca o tym ostrzezenie w wyniku analizy.
+
+Do lokalnego uruchomienia skopiuj `.env.example` do `.env` i uzupelnij:
+
+```dotenv
+OPENAI_API_KEY=twoj_klucz_openai
+OPENAI_MODEL=gpt-4o-mini
+```
+
 ## Production lokalnie lub na serwerze
 
 ```powershell
@@ -66,6 +76,7 @@ sudo systemctl reload nginx
 ```bash
 sudo certbot --nginx -d search-agent.webaby.io
 ```
+
 ### Krok 3: automatyczne odnawianie certyfikatu
 
 Certbot na tym serwerze ma juz aktywny `certbot.timer`, wiec nie trzeba dokladac drugiego timera, jesli `systemctl status certbot.timer` pokazuje stan `active`.
@@ -83,7 +94,11 @@ W `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets` dodaj:
 
 - `DEPLOY_USER` - uzytkownik SSH na serwerze
 - `DEPLOY_SSH_KEY` - prywatny klucz SSH do tego uzytkownika
-- `DEPLOY_PATH` - katalog wdrozenia na serwerze, np. `/opt/search-agent`
+- `DEPLOY_PATH` - katalog wdrozenia na serwerze, najlepiej `/home/webaby/search-agent`
+- `OPENAI_API_KEY` - klucz API do OpenAI
+- `OPENAI_MODEL` - opcjonalnie, jesli nie podasz to poleci `gpt-4o-mini`
+
+Workflow podczas deployu zapisuje `.env` na serwerze i przekazuje te wartosci do `docker compose`.
 
 ## Wymagania na serwerze
 
@@ -99,7 +114,8 @@ W `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets` dodaj:
 
 ## Szybka weryfikacja po deployu
 
+
 - otworz `https://search-agent.webaby.io`
 - sprawdz backend: `https://search-agent.webaby.io/api/analyze`
 - lokalnie na serwerze sprawdz `curl http://127.0.0.1:8082`
-- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8003/api/analyze`
+- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8003/health`

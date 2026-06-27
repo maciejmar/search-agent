@@ -1,4 +1,4 @@
-import io
+﻿import io
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,8 +33,12 @@ def extract_document_text(filename: str, payload: bytes) -> ExtractedDocument:
 
 
 def normalize_text(text: str) -> str:
-    collapsed = re.sub(r'\s+', ' ', text or '')
-    return collapsed.strip()
+    lines = []
+    for raw_line in re.split(r'\r?\n+', text or ''):
+        collapsed = re.sub(r'\s+', ' ', raw_line).strip()
+        if collapsed:
+            lines.append(collapsed)
+    return '\n'.join(lines)
 
 
 def _extract_pdf_text(payload: bytes) -> str:

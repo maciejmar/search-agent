@@ -2,9 +2,10 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.schemas import AnalysisResponse, UploadedDocument
+from app.schemas import AnalysisResponse, GlobalIssue, UploadedDocument
 from app.services.document_reader import ExtractedDocument
-from app.services.notary_analysis import analyze_documents
+from app.services.notary_analysis import analyze_documents as analyze_documents_heuristically
+from app.services.openai_analysis import analyze_documents_with_openai, is_openai_configured
 
 
 class AnalysisState(TypedDict):
@@ -12,8 +13,25 @@ class AnalysisState(TypedDict):
     response: AnalysisResponse | None
 
 
+
 def run_analysis(state: AnalysisState) -> AnalysisState:
-    parties, global_issues = analyze_documents(state['documents'])
+    analysis_mode = 'openai'
+    try:
+        if not is_openai_configured():
+            raise RuntimeError('OPENAI_API_KEY is not configured')
+        parties, global_issues = analyze_documents_with_openai(state['documents'])
+    except Exception as error:
+        analysis_mode = 'heuristic_fallback'
+        parties, global_issues = analyze_documents_heuristically(state['documents'])
+        global_issues.insert(
+            0,
+            GlobalIssue(
+                severity='warning',
+                message=f'Analiza OpenAI API byla niedostepna, uzyto fallbacku heurystycznego: {error.__class__.__name__}.',
+                documents=[document.name for document in state['documents']],
+            ),
+        )
+
     uploaded_documents = [
         UploadedDocument(
             fileName=document.name,
@@ -27,20 +45,22 @@ def run_analysis(state: AnalysisState) -> AnalysisState:
         documents=uploaded_documents,
         parties=parties,
         globalIssues=global_issues,
-        summary=_build_summary(uploaded_documents, parties),
+        summary=_build_summary(uploaded_documents, parties, analysis_mode),
     )
     return {'documents': state['documents'], 'response': response}
 
 
 
-def _build_summary(documents: list[UploadedDocument], parties) -> str:
+def _build_summary(documents: list[UploadedDocument], parties, analysis_mode: str) -> str:
+    source_label = 'OpenAI API' if analysis_mode == 'openai' else 'fallback heurystyczny'
     if not parties:
-        return f'Przeanalizowano {len(documents)} plik(i), ale nie znaleziono jednoznacznych danych stron.'
+        return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}, ale nie znaleziono jednoznacznych danych stron.'
 
     inconsistent = sum(1 for party in parties if party.issues)
     if inconsistent:
-        return f'Przeanalizowano {len(documents)} plik(i). Wykryto niespojnosci dla {inconsistent} stron.'
-    return f'Przeanalizowano {len(documents)} plik(i). Nie wykryto niespojnosci w znalezionych danych stron.'
+        return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Wykryto niespojnosci dla {inconsistent} stron.'
+    return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Nie wykryto niespojnosci w znalezionych danych stron.'
+
 
 
 def build_graph():
@@ -52,6 +72,7 @@ def build_graph():
 
 
 analysis_graph = build_graph()
+
 
 
 def analyze_with_graph(documents: list[ExtractedDocument]) -> AnalysisResponse:
