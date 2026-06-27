@@ -44,11 +44,54 @@ interface GlobalIssue {
   documents: string[];
 }
 
+interface UsageSummary {
+  provider: 'openai' | 'local';
+  mode: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cachedInputTokens: number;
+  estimatedCostUsd: number;
+  pricingInputUsdPer1M: number;
+  pricingOutputUsdPer1M: number;
+  pricingCachedInputUsdPer1M: number;
+}
+
+interface UsageRun {
+  timestamp: string;
+  provider: 'openai' | 'local';
+  mode: string;
+  model: string;
+  documentNames: string[];
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cachedInputTokens: number;
+  estimatedCostUsd: number;
+  status: 'success' | 'fallback' | 'error';
+}
+
+interface UsageTotals {
+  requestCount: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  totalCachedInputTokens: number;
+  totalCostUsd: number;
+}
+
+interface UsageDashboard {
+  totals: UsageTotals;
+  recentRuns: UsageRun[];
+}
+
 interface AnalysisResponse {
   documents: UploadedDocument[];
   parties: PartyResult[];
   globalIssues: GlobalIssue[];
   summary: string;
+  usage: UsageSummary | null;
 }
 
 @Component({
@@ -60,10 +103,25 @@ interface AnalysisResponse {
 export class AppComponent {
   private readonly http = inject(HttpClient);
 
+  activeTab: 'analysis' | 'usage' = 'analysis';
   selectedFiles: File[] = [];
   isSubmitting = false;
+  isLoadingUsage = false;
   errorMessage = '';
+  usageErrorMessage = '';
   analysisResult: AnalysisResponse | null = null;
+  usageDashboard: UsageDashboard | null = null;
+
+  constructor() {
+    this.loadUsageDashboard();
+  }
+
+  setActiveTab(tab: 'analysis' | 'usage'): void {
+    this.activeTab = tab;
+    if (tab === 'usage' && !this.usageDashboard) {
+      this.loadUsageDashboard();
+    }
+  }
 
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -94,6 +152,7 @@ export class AppComponent {
       next: (response) => {
         this.analysisResult = response;
         this.isSubmitting = false;
+        this.loadUsageDashboard();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = typeof error.error?.detail === 'string'
@@ -104,7 +163,33 @@ export class AppComponent {
     });
   }
 
+  loadUsageDashboard(): void {
+    this.isLoadingUsage = true;
+    this.usageErrorMessage = '';
+    this.http.get<UsageDashboard>('/api/usage').subscribe({
+      next: (dashboard) => {
+        this.usageDashboard = dashboard;
+        this.isLoadingUsage = false;
+      },
+      error: () => {
+        this.usageErrorMessage = 'Nie udalo sie pobrac statystyk zuzycia API.';
+        this.isLoadingUsage = false;
+      }
+    });
+  }
+
   trackParty(_: number, party: PartyResult): string {
     return party.normalizedName;
+  }
+
+  formatUsd(value: number): string {
+    return new Intl.NumberFormat('pl-PL', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 6
+    }).format(value);
+  }
+
+  formatTimestamp(value: string): string {
+    return new Date(value).toLocaleString('pl-PL');
   }
 }

@@ -10,6 +10,15 @@
     </div>
 
     <div class="upload-card">
+      <div class="tab-row">
+        <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'analysis'" (click)="setActiveTab('analysis')">
+          Analiza
+        </button>
+        <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
+          Zuzycie API
+        </button>
+      </div>
+
       <label class="upload-zone" for="file-upload">
         <input id="file-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt" (change)="onFilesSelected($event)" />
         <span class="upload-title">Dodaj dokumenty</span>
@@ -44,89 +53,182 @@
     </div>
   </section>
 
-  @if (analysisResult) {
-    <section class="results">
-      <div class="results__summary">
-        <h2>Wynik analizy</h2>
-        <p>{{ analysisResult.summary }}</p>
-      </div>
+  @if (activeTab === 'analysis') {
+    @if (analysisResult) {
+      <section class="results">
+        <div class="results__summary">
+          <h2>Wynik analizy</h2>
+          <p>{{ analysisResult.summary }}</p>
+        </div>
 
-      <div class="document-grid">
-        @for (document of analysisResult.documents; track document.fileName) {
-          <article class="document-card">
-            <p class="document-card__label">Dokument</p>
-            <h3>{{ document.fileName }}</h3>
-            <p>Format: {{ document.fileType }}</p>
-            <p>Znaki po ekstrakcji: {{ document.charCount }}</p>
-          </article>
+        @if (analysisResult.usage) {
+          <section class="usage-strip">
+            <article class="usage-stat">
+              <span>Tryb analizy</span>
+              <strong>{{ analysisResult.usage.mode }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Model</span>
+              <strong>{{ analysisResult.usage.model }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Input</span>
+              <strong>{{ analysisResult.usage.inputTokens }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Output</span>
+              <strong>{{ analysisResult.usage.outputTokens }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Koszt USD</span>
+              <strong>{{ formatUsd(analysisResult.usage.estimatedCostUsd) }}</strong>
+            </article>
+          </section>
         }
-      </div>
 
-      @if (analysisResult.globalIssues.length) {
-        <div class="global-issues">
-          @for (issue of analysisResult.globalIssues; track issue.message) {
-            <div class="feedback" [class.feedback--warn]="issue.severity === 'warning'" [class.feedback--info]="issue.severity === 'info'" [class.feedback--error]="issue.severity === 'error'">
-              <strong>{{ issue.message }}</strong>
-              @if (issue.documents.length) {
-                <span>Dokumenty: {{ issue.documents.join(', ') }}</span>
-              }
-            </div>
+        <div class="document-grid">
+          @for (document of analysisResult.documents; track document.fileName) {
+            <article class="document-card">
+              <p class="document-card__label">Dokument</p>
+              <h3>{{ document.fileName }}</h3>
+              <p>Format: {{ document.fileType }}</p>
+              <p>Znaki po ekstrakcji: {{ document.charCount }}</p>
+            </article>
           }
         </div>
-      }
 
-      <div class="party-list">
-        @for (party of analysisResult.parties; track trackParty($index, party)) {
-          <article class="party-card">
-            <div class="party-card__header">
-              <div>
-                <p class="party-type">{{ party.partyType }}</p>
-                <h3>{{ party.displayName }}</h3>
+        @if (analysisResult.globalIssues.length) {
+          <div class="global-issues">
+            @for (issue of analysisResult.globalIssues; track issue.message) {
+              <div class="feedback" [class.feedback--warn]="issue.severity === 'warning'" [class.feedback--info]="issue.severity === 'info'" [class.feedback--error]="issue.severity === 'error'">
+                <strong>{{ issue.message }}</strong>
+                @if (issue.documents.length) {
+                  <span>Dokumenty: {{ issue.documents.join(', ') }}</span>
+                }
               </div>
-              <span class="party-docs">{{ party.documents.join(', ') }}</span>
-            </div>
+            }
+          </div>
+        }
 
-            @if (party.issues.length) {
-              <div class="issue-list">
-                @for (issue of party.issues; track issue.field + issue.message) {
-                  <div class="feedback feedback--error">
-                    <strong>{{ issue.message }}</strong>
-                    <span>Pole: {{ issue.field }}</span>
-                    <span>Wartosci: {{ issue.variants.join(' | ') }}</span>
+        <div class="party-list">
+          @for (party of analysisResult.parties; track trackParty($index, party)) {
+            <article class="party-card">
+              <div class="party-card__header">
+                <div>
+                  <p class="party-type">{{ party.partyType }}</p>
+                  <h3>{{ party.displayName }}</h3>
+                </div>
+                <span class="party-docs">{{ party.documents.join(', ') }}</span>
+              </div>
+
+              @if (party.issues.length) {
+                <div class="issue-list">
+                  @for (issue of party.issues; track issue.field + issue.message) {
+                    <div class="feedback feedback--error">
+                      <strong>{{ issue.message }}</strong>
+                      <span>Pole: {{ issue.field }}</span>
+                      <span>Wartosci: {{ issue.variants.join(' | ') }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="feedback feedback--success">Nie wykryto niespojnosci dla tej strony.</div>
+              }
+
+              <div class="field-table">
+                @for (field of party.fields; track field.field) {
+                  <div class="field-row">
+                    <div class="field-row__meta">
+                      <strong>{{ field.field }}</strong>
+                      <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
+                        {{ field.consistent ? 'spojne' : 'rozne wartosci' }}
+                      </span>
+                    </div>
+                    <div class="variant-list">
+                      @for (variant of field.variants; track variant.normalizedValue) {
+                        <div class="variant-card">
+                          <strong>{{ variant.value }}</strong>
+                          <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
+                          <span>Wystapienia: {{ variant.occurrences }}</span>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
               </div>
-            } @else {
-              <div class="feedback feedback--success">Nie wykryto niespojnosci dla tej strony.</div>
-            }
+            </article>
+          }
+        </div>
 
-            <div class="field-table">
-              @for (field of party.fields; track field.field) {
-                <div class="field-row">
-                  <div class="field-row__meta">
-                    <strong>{{ field.field }}</strong>
-                    <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
-                      {{ field.consistent ? 'spojne' : 'rozne wartosci' }}
-                    </span>
-                  </div>
-                  <div class="variant-list">
-                    @for (variant of field.variants; track variant.normalizedValue) {
-                      <div class="variant-card">
-                        <strong>{{ variant.value }}</strong>
-                        <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
-                        <span>Wystapienia: {{ variant.occurrences }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          </article>
+        @if (!analysisResult.parties.length) {
+          <div class="empty-state">Nie znaleziono danych stron, ktore mozna bylo porownac.</div>
         }
+      </section>
+    }
+  } @else {
+    <section class="results">
+      <div class="results__summary">
+        <h2>Zuzycie API</h2>
+        <p>Podglad ostatnich wywolan modelu, tokenow i szacowanego kosztu.</p>
       </div>
 
-      @if (!analysisResult.parties.length) {
-        <div class="empty-state">Nie znaleziono danych stron, ktore mozna bylo porownac.</div>
+      @if (usageErrorMessage) {
+        <div class="feedback feedback--error usage-dashboard">{{ usageErrorMessage }}</div>
+      }
+
+      @if (isLoadingUsage) {
+        <div class="empty-state">Ladowanie statystyk API...</div>
+      } @else if (usageDashboard) {
+        <section class="usage-strip usage-strip--dashboard">
+          <article class="usage-stat">
+            <span>Liczba wywolan</span>
+            <strong>{{ usageDashboard.totals.requestCount }}</strong>
+          </article>
+          <article class="usage-stat">
+            <span>Input tokens</span>
+            <strong>{{ usageDashboard.totals.totalInputTokens }}</strong>
+          </article>
+          <article class="usage-stat">
+            <span>Output tokens</span>
+            <strong>{{ usageDashboard.totals.totalOutputTokens }}</strong>
+          </article>
+          <article class="usage-stat">
+            <span>Cached input</span>
+            <strong>{{ usageDashboard.totals.totalCachedInputTokens }}</strong>
+          </article>
+          <article class="usage-stat">
+            <span>Laczny koszt USD</span>
+            <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }}</strong>
+          </article>
+        </section>
+
+        @if (usageDashboard.recentRuns.length) {
+          <div class="usage-run-list">
+            @for (run of usageDashboard.recentRuns; track run.timestamp + run.model) {
+              <article class="usage-run-card">
+                <div class="usage-run-card__header">
+                  <div>
+                    <h3>{{ run.model }}</h3>
+                    <p>{{ formatTimestamp(run.timestamp) }}</p>
+                  </div>
+                  <span class="run-badge" [class.run-badge--fallback]="run.status === 'fallback'" [class.run-badge--success]="run.status === 'success'" [class.run-badge--error]="run.status === 'error'">
+                    {{ run.status }}
+                  </span>
+                </div>
+                <p>Tryb: {{ run.mode }}</p>
+                <p>Dokumenty: {{ run.documentNames.join(', ') || 'brak' }}</p>
+                <div class="usage-run-grid">
+                  <span>Input: <strong>{{ run.inputTokens }}</strong></span>
+                  <span>Output: <strong>{{ run.outputTokens }}</strong></span>
+                  <span>Total: <strong>{{ run.totalTokens }}</strong></span>
+                  <span>Koszt USD: <strong>{{ formatUsd(run.estimatedCostUsd) }}</strong></span>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="empty-state">Brak zapisanej historii wywolan API.</div>
+        }
       }
     </section>
   }

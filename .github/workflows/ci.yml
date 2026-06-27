@@ -48,4 +48,5 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Syntax check
-        run: python -m py_compile app/main.py app/schemas.py app/graph/analysis_graph.py app/services/document_reader.py app/services/notary_analysis.py app/services/openai_analysis.py
+        run: python -m py_compile app/main.py app/schemas.py app/graph/analysis_graph.py app/services/document_reader.py app/services/notary_analysis.py app/services/openai_analysis.py app/services/usage_tracker.py
+

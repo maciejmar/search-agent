@@ -4,7 +4,7 @@ from textwrap import shorten
 
 from pydantic import BaseModel
 
-from app.schemas import GlobalIssue, PartyResult
+from app.schemas import GlobalIssue, PartyResult, UsageSummary
 from app.services.document_reader import ExtractedDocument
 
 
@@ -29,7 +29,7 @@ def is_openai_configured() -> bool:
 
 
 
-def analyze_documents_with_openai(documents: list[ExtractedDocument]) -> tuple[list[PartyResult], list[GlobalIssue]]:
+def analyze_documents_with_openai(documents: list[ExtractedDocument]) -> tuple[list[PartyResult], list[GlobalIssue], UsageSummary]:
     from openai import OpenAI
 
     api_key = os.getenv('OPENAI_API_KEY')
@@ -74,7 +74,55 @@ def analyze_documents_with_openai(documents: list[ExtractedDocument]) -> tuple[l
 
     payload = json.loads(response.output_text)
     parsed = LLMAnalysisPayload.model_validate(payload)
-    return parsed.parties, parsed.globalIssues
+    usage = _build_usage_summary(response, model)
+    return parsed.parties, parsed.globalIssues, usage
+
+
+
+def _build_usage_summary(response, model: str) -> UsageSummary:
+    usage = getattr(response, 'usage', None)
+    input_tokens = int(getattr(usage, 'input_tokens', 0) or 0)
+    output_tokens = int(getattr(usage, 'output_tokens', 0) or 0)
+    total_tokens = int(getattr(usage, 'total_tokens', input_tokens + output_tokens) or (input_tokens + output_tokens))
+
+    input_details = getattr(usage, 'input_tokens_details', None)
+    cached_input_tokens = int(getattr(input_details, 'cached_tokens', 0) or 0) if input_details else 0
+
+    price_input = _env_float('OPENAI_PRICE_INPUT_USD_PER_1M_TOKENS', 0.15)
+    price_output = _env_float('OPENAI_PRICE_OUTPUT_USD_PER_1M_TOKENS', 0.60)
+    price_cached = _env_float('OPENAI_PRICE_CACHED_INPUT_USD_PER_1M_TOKENS', 0.075)
+
+    non_cached_input = max(input_tokens - cached_input_tokens, 0)
+    estimated_cost = (
+        (non_cached_input / 1_000_000) * price_input
+        + (cached_input_tokens / 1_000_000) * price_cached
+        + (output_tokens / 1_000_000) * price_output
+    )
+
+    return UsageSummary(
+        provider='openai',
+        mode='openai',
+        model=model,
+        inputTokens=input_tokens,
+        outputTokens=output_tokens,
+        totalTokens=total_tokens,
+        cachedInputTokens=cached_input_tokens,
+        estimatedCostUsd=round(estimated_cost, 8),
+        pricingInputUsdPer1M=price_input,
+        pricingOutputUsdPer1M=price_output,
+        pricingCachedInputUsdPer1M=price_cached,
+    )
+
+
+
+def _env_float(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None or raw_value == '':
+        return default
+    try:
+        return float(raw_value)
+    except ValueError:
+        return default
 
 
 
