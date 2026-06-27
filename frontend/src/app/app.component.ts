@@ -1,23 +1,54 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 
-interface StandingRow {
-  rank: number;
-  team: string;
-  matches: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  goalDiff: number;
-  points: number;
+interface UploadedDocument {
+  fileName: string;
+  fileType: string;
+  charCount: number;
 }
 
-interface StandingsResponse {
-  group: string;
-  standings: StandingRow[];
+interface FieldVariant {
+  value: string;
+  normalizedValue: string;
+  documents: string[];
+  occurrences: number;
+}
+
+interface PartyFieldResult {
+  field: string;
+  consistent: boolean;
+  variants: FieldVariant[];
+}
+
+interface PartyIssue {
+  field: string;
+  severity: 'warning' | 'error';
+  message: string;
+  variants: string[];
+  documents: string[];
+}
+
+interface PartyResult {
+  displayName: string;
+  normalizedName: string;
+  partyType: 'person' | 'organization' | 'unknown';
+  documents: string[];
+  fields: PartyFieldResult[];
+  issues: PartyIssue[];
+}
+
+interface GlobalIssue {
+  severity: 'info' | 'warning' | 'error';
+  message: string;
+  documents: string[];
+}
+
+interface AnalysisResponse {
+  documents: UploadedDocument[];
+  parties: PartyResult[];
+  globalIssues: GlobalIssue[];
+  summary: string;
 }
 
 @Component({
@@ -29,22 +60,51 @@ interface StandingsResponse {
 export class AppComponent {
   private readonly http = inject(HttpClient);
 
-  groupName = 'Tabela';
-  standings: StandingRow[] = [];
-  isLoading = true;
-  loadError = '';
+  selectedFiles: File[] = [];
+  isSubmitting = false;
+  errorMessage = '';
+  analysisResult: AnalysisResponse | null = null;
 
-  constructor() {
-    this.http.get<StandingsResponse>('/api/standings').subscribe({
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    this.selectedFiles = files;
+    this.errorMessage = '';
+    this.analysisResult = null;
+  }
+
+  removeFile(index: number): void {
+    this.selectedFiles = this.selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+  }
+
+  analyzeDocuments(): void {
+    if (!this.selectedFiles.length) {
+      this.errorMessage = 'Wybierz co najmniej jeden dokument do analizy.';
+      return;
+    }
+
+    const formData = new FormData();
+    this.selectedFiles.forEach((file) => formData.append('files', file, file.name));
+
+    this.isSubmitting = true;
+    this.errorMessage = '';
+    this.analysisResult = null;
+
+    this.http.post<AnalysisResponse>('/api/analyze', formData).subscribe({
       next: (response) => {
-        this.groupName = response.group || 'Tabela';
-        this.standings = response.standings;
-        this.isLoading = false;
+        this.analysisResult = response;
+        this.isSubmitting = false;
       },
-      error: () => {
-        this.loadError = 'Nie udalo sie pobrac danych z backendu.';
-        this.isLoading = false;
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = typeof error.error?.detail === 'string'
+          ? error.error.detail
+          : 'Nie udalo sie przeanalizowac dokumentow.';
+        this.isSubmitting = false;
       }
     });
+  }
+
+  trackParty(_: number, party: PartyResult): string {
+    return party.normalizedName;
   }
 }

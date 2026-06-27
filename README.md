@@ -1,4 +1,4 @@
-# Search Agent
+﻿# Search Agent
 
 Projekt ma dwa tryby uruchamiania:
 
@@ -100,6 +100,6 @@ W `GitHub -> Settings -> Secrets and variables -> Actions -> Secrets` dodaj:
 ## Szybka weryfikacja po deployu
 
 - otworz `https://search-agent.webaby.io`
-- sprawdz backend: `https://search-agent.webaby.io/api/standings`
+- sprawdz backend: `https://search-agent.webaby.io/api/analyze`
 - lokalnie na serwerze sprawdz `curl http://127.0.0.1:8082`
-- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8003/api/standings`
+- lokalnie na serwerze sprawdz `curl http://127.0.0.1:8003/api/analyze`

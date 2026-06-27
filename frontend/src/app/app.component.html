@@ -1,62 +1,133 @@
 <main class="page">
-  <section class="card" aria-labelledby="group-title">
-    <div class="card__header">
-      <div>
-        <p class="eyebrow">Angular + Python LangGraph</p>
-        <h1 id="group-title">{{ groupName }}</h1>
-      </div>
-      @if (isLoading) {
-        <span class="status">Ladowanie...</span>
-      }
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">Analiza aktu notarialnego</p>
+      <h1>Sprawdz zgodnosc danych stron w dokumentach</h1>
+      <p class="lead">
+        Wrzuc jeden lub kilka dokumentow, a backend przeanalizuje wskazane dane stron i wykryje miejsca,
+        w ktorych PESEL, NIP, KRS, numer dowodu lub adres przestaja byc spojne.
+      </p>
     </div>
 
-    @if (loadError) {
-      <div class="notice">{{ loadError }}</div>
-    }
+    <div class="upload-card">
+      <label class="upload-zone" for="file-upload">
+        <input id="file-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt" (change)="onFilesSelected($event)" />
+        <span class="upload-title">Dodaj dokumenty</span>
+        <span class="upload-subtitle">Obslugiwane formaty: PDF, DOC, DOCX, TXT</span>
+      </label>
 
-    @if (standings.length) {
-      <div class="table-wrap">
-        <table class="standings">
-          <thead>
-            <tr>
-              <th scope="col" class="col-rank">#</th>
-              <th scope="col" class="col-team">Druzyna</th>
-              <th scope="col">M</th>
-              <th scope="col">Z</th>
-              <th scope="col">R</th>
-              <th scope="col">P</th>
-              <th scope="col">BZ</th>
-              <th scope="col">BS</th>
-              <th scope="col">RB</th>
-              <th scope="col" class="col-points">Pkt</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (team of standings; track team.rank) {
-              <tr>
-                <td class="rank">
-                  @if (team.rank <= 3) {
-                    <span class="rank-badge">{{ team.rank }}</span>
-                  } @else {
-                    <span class="rank-plain">{{ team.rank }}</span>
-                  }
-                </td>
-                <td class="team">{{ team.team }}</td>
-                <td>{{ team.matches }}</td>
-                <td>{{ team.wins }}</td>
-                <td>{{ team.draws }}</td>
-                <td>{{ team.losses }}</td>
-                <td>{{ team.goalsFor }}</td>
-                <td>{{ team.goalsAgainst }}</td>
-                <td>{{ team.goalDiff }}</td>
-                <td class="points">{{ team.points }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    } @else if (!isLoading && !loadError) {
-      <div class="empty-state">Brak danych do wyswietlenia.</div>
-    }
+      @if (selectedFiles.length) {
+        <div class="file-list">
+          @for (file of selectedFiles; track file.name + file.size) {
+            <div class="file-chip">
+              <div>
+                <strong>{{ file.name }}</strong>
+                <span>{{ file.size }} B</span>
+              </div>
+              <button type="button" (click)="removeFile($index)">Usun</button>
+            </div>
+          }
+        </div>
+      }
+
+      <button class="primary-button" type="button" (click)="analyzeDocuments()" [disabled]="isSubmitting">
+        @if (isSubmitting) {
+          Analizowanie...
+        } @else {
+          Analizuj zgodnosc danych
+        }
+      </button>
+
+      @if (errorMessage) {
+        <p class="feedback feedback--error">{{ errorMessage }}</p>
+      }
+    </div>
   </section>
+
+  @if (analysisResult) {
+    <section class="results">
+      <div class="results__summary">
+        <h2>Wynik analizy</h2>
+        <p>{{ analysisResult.summary }}</p>
+      </div>
+
+      <div class="document-grid">
+        @for (document of analysisResult.documents; track document.fileName) {
+          <article class="document-card">
+            <p class="document-card__label">Dokument</p>
+            <h3>{{ document.fileName }}</h3>
+            <p>Format: {{ document.fileType }}</p>
+            <p>Znaki po ekstrakcji: {{ document.charCount }}</p>
+          </article>
+        }
+      </div>
+
+      @if (analysisResult.globalIssues.length) {
+        <div class="global-issues">
+          @for (issue of analysisResult.globalIssues; track issue.message) {
+            <div class="feedback" [class.feedback--warn]="issue.severity === 'warning'" [class.feedback--info]="issue.severity === 'info'" [class.feedback--error]="issue.severity === 'error'">
+              <strong>{{ issue.message }}</strong>
+              @if (issue.documents.length) {
+                <span>Dokumenty: {{ issue.documents.join(', ') }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <div class="party-list">
+        @for (party of analysisResult.parties; track trackParty($index, party)) {
+          <article class="party-card">
+            <div class="party-card__header">
+              <div>
+                <p class="party-type">{{ party.partyType }}</p>
+                <h3>{{ party.displayName }}</h3>
+              </div>
+              <span class="party-docs">{{ party.documents.join(', ') }}</span>
+            </div>
+
+            @if (party.issues.length) {
+              <div class="issue-list">
+                @for (issue of party.issues; track issue.field + issue.message) {
+                  <div class="feedback feedback--error">
+                    <strong>{{ issue.message }}</strong>
+                    <span>Pole: {{ issue.field }}</span>
+                    <span>Wartosci: {{ issue.variants.join(' | ') }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="feedback feedback--success">Nie wykryto niespojnosci dla tej strony.</div>
+            }
+
+            <div class="field-table">
+              @for (field of party.fields; track field.field) {
+                <div class="field-row">
+                  <div class="field-row__meta">
+                    <strong>{{ field.field }}</strong>
+                    <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
+                      {{ field.consistent ? 'spojne' : 'rozne wartosci' }}
+                    </span>
+                  </div>
+                  <div class="variant-list">
+                    @for (variant of field.variants; track variant.normalizedValue) {
+                      <div class="variant-card">
+                        <strong>{{ variant.value }}</strong>
+                        <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
+                        <span>Wystapienia: {{ variant.occurrences }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (!analysisResult.parties.length) {
+        <div class="empty-state">Nie znaleziono danych stron, ktore mozna bylo porownac.</div>
+      }
+    </section>
+  }
 </main>

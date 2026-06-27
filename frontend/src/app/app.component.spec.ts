@@ -16,10 +16,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should start without local fallback standings', () => {
+  it('should start without selected files', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.groupName).toBe('Tabela');
-    expect(app.standings.length).toBe(0);
+    expect(app.selectedFiles.length).toBe(0);
+    expect(app.analysisResult).toBeNull();
   });
 });

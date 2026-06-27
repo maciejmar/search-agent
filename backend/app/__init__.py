@@ -1,1 +1,1 @@
-"""Backend package for the standings app."""
+"""Backend package for notarial consistency analysis."""
