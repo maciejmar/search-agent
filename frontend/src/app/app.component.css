@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100vh;
-  color: #1b1f18;
+  color: #e7ece5;
 }
 
 .page {
@@ -33,11 +33,11 @@
 .document-card,
 .party-card,
 .usage-run-card {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(223, 226, 215, 0.95);
+  background: rgba(47, 54, 56, 0.84);
+  border: 1px solid rgba(150, 163, 156, 0.2);
   border-radius: 28px;
-  box-shadow: 0 18px 60px rgba(43, 50, 35, 0.08);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 22px 60px rgba(8, 10, 11, 0.3);
+  backdrop-filter: blur(14px);
 }
 
 .hero__copy {
@@ -46,7 +46,7 @@
 
 .eyebrow {
   margin: 0 0 10px;
-  color: #66725d;
+  color: #b7c0b7;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -70,7 +70,7 @@ h1 {
 .lead {
   margin-bottom: 0;
   max-width: 62ch;
-  color: #4b5742;
+  color: #c7d1c7;
   font-size: 1.04rem;
   line-height: 1.7;
 }
@@ -88,10 +88,10 @@ h1 {
 .tab-button {
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid #d8decd;
+  border: 1px solid rgba(168, 177, 170, 0.18);
   border-radius: 999px;
-  background: #f6f7f1;
-  color: #44503a;
+  background: rgba(71, 78, 82, 0.9);
+  color: #d5ddd6;
   font-weight: 700;
   cursor: pointer;
 }
@@ -107,9 +107,9 @@ h1 {
   flex-direction: column;
   gap: 8px;
   padding: 28px;
-  border: 1px dashed #8da17c;
+  border: 1px dashed rgba(144, 164, 145, 0.42);
   border-radius: 20px;
-  background: linear-gradient(180deg, rgba(241, 247, 236, 0.9) 0%, rgba(250, 251, 247, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(60, 68, 64, 0.88) 0%, rgba(52, 59, 56, 0.92) 100%);
   cursor: pointer;
 }
 
@@ -123,7 +123,7 @@ h1 {
 }
 
 .upload-subtitle {
-  color: #637058;
+  color: #a8b3aa;
   font-size: 0.95rem;
 }
 
@@ -141,7 +141,7 @@ h1 {
   gap: 16px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f6f7f1;
+  background: rgba(73, 80, 83, 0.9);
 }
 
 .file-chip span,
@@ -152,7 +152,7 @@ h1 {
 .party-type,
 .usage-stat span,
 .usage-run-card p {
-  color: #687362;
+  color: #a9b2aa;
   font-size: 0.92rem;
 }
 
@@ -165,7 +165,7 @@ h1 {
 
 .file-chip button {
   padding: 10px 16px;
-  background: #ecefe3;
+  background: rgba(92, 99, 102, 0.9);
   cursor: pointer;
 }
 
@@ -215,8 +215,8 @@ h1 {
 .usage-stat {
   padding: 18px 20px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(223, 226, 215, 0.95);
+  background: rgba(65, 72, 75, 0.82);
+  border: 1px solid rgba(156, 168, 161, 0.16);
 }
 
 .usage-stat strong {
@@ -244,7 +244,7 @@ h1 {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
   margin-top: 14px;
-  color: #3f4638;
+  color: #d6ddd7;
 }
 
 .run-badge {
@@ -291,7 +291,7 @@ h1 {
 
 .field-row {
   padding-top: 16px;
-  border-top: 1px solid #e2e5db;
+  border-top: 1px solid rgba(161, 171, 164, 0.14);
 }
 
 .variant-list {
@@ -307,7 +307,7 @@ h1 {
   gap: 6px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f7f7f2;
+  background: rgba(68, 75, 78, 0.88);
 }
 
 .feedback {
@@ -353,9 +353,9 @@ h1 {
   margin-top: 18px;
   padding: 18px 22px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(223, 226, 215, 0.95);
-  color: #637058;
+  background: rgba(56, 63, 66, 0.88);
+  border: 1px solid rgba(156, 168, 161, 0.16);
+  color: #b3beb5;
 }
 
 @media (max-width: 940px) {
