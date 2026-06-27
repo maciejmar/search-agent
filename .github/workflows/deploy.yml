@@ -28,7 +28,7 @@ jobs:
             --exclude='backend/__pycache__' \
             --exclude='backend/app/__pycache__' \
             --exclude='backend/app/graph/__pycache__' \
-            -czf search-agent.tar.gz .
+            -czf /tmp/search-agent.tar.gz .
 
       - name: Prepare SSH key
         env:
@@ -42,7 +42,7 @@ jobs:
       - name: Upload bundle
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: scp -P 2222 search-agent.tar.gz "$DEPLOY_USER@95.158.64.196:/tmp/search-agent.tar.gz"
+        run: scp -P 2222 /tmp/search-agent.tar.gz "$DEPLOY_USER@95.158.64.196:/tmp/search-agent.tar.gz"
 
       - name: Deploy on server
         env:
