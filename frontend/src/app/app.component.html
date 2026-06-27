@@ -1,0 +1,58 @@
+<main class="page">
+  <section class="card" aria-labelledby="group-title">
+    <div class="card__header">
+      <div>
+        <p class="eyebrow">Angular + Python LangGraph</p>
+        <h1 id="group-title">{{ groupName }}</h1>
+      </div>
+      @if (isLoading) {
+        <span class="status">Ladowanie...</span>
+      }
+    </div>
+
+    @if (loadError) {
+      <div class="notice">{{ loadError }}</div>
+    }
+
+    <div class="table-wrap">
+      <table class="standings">
+        <thead>
+          <tr>
+            <th scope="col" class="col-rank">#</th>
+            <th scope="col" class="col-team">Druzyna</th>
+            <th scope="col">M</th>
+            <th scope="col">Z</th>
+            <th scope="col">R</th>
+            <th scope="col">P</th>
+            <th scope="col">BZ</th>
+            <th scope="col">BS</th>
+            <th scope="col">RB</th>
+            <th scope="col" class="col-points">Pkt</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (team of standings; track team.rank) {
+            <tr>
+              <td class="rank">
+                @if (team.rank <= 3) {
+                  <span class="rank-badge">{{ team.rank }}</span>
+                } @else {
+                  <span class="rank-plain">{{ team.rank }}</span>
+                }
+              </td>
+              <td class="team">{{ team.team }}</td>
+              <td>{{ team.matches }}</td>
+              <td>{{ team.wins }}</td>
+              <td>{{ team.draws }}</td>
+              <td>{{ team.losses }}</td>
+              <td>{{ team.goalsFor }}</td>
+              <td>{{ team.goalsAgainst }}</td>
+              <td>{{ team.goalDiff }}</td>
+              <td class="points">{{ team.points }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>

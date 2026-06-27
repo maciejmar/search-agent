@@ -1,0 +1,164 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  color: #111111;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 56px 24px;
+  background:
+    radial-gradient(circle at top left, rgba(110, 170, 76, 0.08), transparent 24%),
+    linear-gradient(180deg, #fafbf6 0%, #f4f6ef 100%);
+}
+
+.card {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(232, 235, 223, 0.9);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px rgba(34, 41, 24, 0.07);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 12px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: #6a735e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 2vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.status,
+.notice {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.status {
+  color: #6a735e;
+}
+
+.notice {
+  margin: 0 24px 16px;
+  padding: 12px 14px;
+  border: 1px solid #d9e8ce;
+  border-radius: 14px;
+  background: #f4faef;
+  color: #356c27;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.standings thead th {
+  padding: 14px 12px;
+  color: #7a7f87;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  border-bottom: 1px solid #e8ebdf;
+}
+
+.standings thead .col-team,
+.standings tbody .team {
+  text-align: left;
+}
+
+.standings thead .col-rank,
+.standings tbody .rank {
+  width: 72px;
+  text-align: center;
+}
+
+.standings tbody td {
+  padding: 20px 12px;
+  font-size: 1.05rem;
+  text-align: center;
+  border-bottom: 1px solid #e8ebdf;
+}
+
+.standings tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.standings tbody .team {
+  min-width: 300px;
+  font-size: 1.1rem;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #49a532;
+  color: #ffffff;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rank-plain {
+  font-weight: 800;
+}
+
+.points {
+  color: #49a532;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 24px 12px;
+  }
+
+  .card {
+    border-radius: 20px;
+  }
+
+  .card__header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px 16px 8px;
+  }
+
+  .notice {
+    margin: 0 16px 12px;
+  }
+
+  .standings thead th,
+  .standings tbody td {
+    padding: 16px 10px;
+  }
+
+  .standings tbody .team {
+    min-width: 220px;
+    font-size: 1rem;
+  }
+}
