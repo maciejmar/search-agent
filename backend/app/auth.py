@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=['pbkdf2_sha256', 'bcrypt'], deprecated='auto')
 JWT_SECRET = os.getenv('JWT_SECRET', 'change-me-search-agent')
 JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7
@@ -64,6 +64,10 @@ def authenticate_user(db: Session, identifier: str, password: str) -> User:
 def register_user(db: Session, username: str, email: str, full_name: str, password: str) -> User:
     normalized_username = username.lower().strip()
     normalized_email = email.lower().strip()
+    normalized_full_name = full_name.strip()
+
+    if not normalized_username or not normalized_email or not normalized_full_name or not password:
+        raise AuthError('Missing required fields')
 
     existing = db.query(User).filter((func.lower(User.email) == normalized_email) | (func.lower(User.username) == normalized_username)).first()
     if existing is not None:
@@ -79,7 +83,7 @@ def register_user(db: Session, username: str, email: str, full_name: str, passwo
     user = User(
         username=normalized_username,
         email=normalized_email,
-        full_name=full_name.strip(),
+        full_name=normalized_full_name,
         role=role,
         password_hash=hash_password(password),
     )
