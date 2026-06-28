@@ -1,28 +1,32 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class UploadedDocument(BaseModel):
+class StrictSchemaModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+
+class UploadedDocument(StrictSchemaModel):
     fileName: str
     fileType: str
     charCount: int
 
 
-class FieldVariant(BaseModel):
+class FieldVariant(StrictSchemaModel):
     value: str
     normalizedValue: str
     documents: list[str]
     occurrences: int
 
 
-class PartyFieldResult(BaseModel):
+class PartyFieldResult(StrictSchemaModel):
     field: str
     consistent: bool
     variants: list[FieldVariant]
 
 
-class PartyIssue(BaseModel):
+class PartyIssue(StrictSchemaModel):
     field: str
     severity: Literal['warning', 'error']
     message: str
@@ -30,7 +34,7 @@ class PartyIssue(BaseModel):
     documents: list[str]
 
 
-class PartyResult(BaseModel):
+class PartyResult(StrictSchemaModel):
     displayName: str
     normalizedName: str
     partyType: Literal['person', 'organization', 'unknown']
@@ -39,13 +43,13 @@ class PartyResult(BaseModel):
     issues: list[PartyIssue]
 
 
-class GlobalIssue(BaseModel):
+class GlobalIssue(StrictSchemaModel):
     severity: Literal['info', 'warning', 'error']
     message: str
     documents: list[str]
 
 
-class UsageSummary(BaseModel):
+class UsageSummary(StrictSchemaModel):
     provider: Literal['openai', 'local']
     mode: str
     model: str
@@ -59,7 +63,7 @@ class UsageSummary(BaseModel):
     pricingCachedInputUsdPer1M: float = 0.0
 
 
-class UsageRun(BaseModel):
+class UsageRun(StrictSchemaModel):
     timestamp: str
     provider: Literal['openai', 'local']
     mode: str
@@ -73,7 +77,7 @@ class UsageRun(BaseModel):
     status: Literal['success', 'fallback', 'error']
 
 
-class UsageTotals(BaseModel):
+class UsageTotals(StrictSchemaModel):
     requestCount: int = 0
     totalInputTokens: int = 0
     totalOutputTokens: int = 0
@@ -82,12 +86,12 @@ class UsageTotals(BaseModel):
     totalCostUsd: float = 0.0
 
 
-class UsageDashboard(BaseModel):
+class UsageDashboard(StrictSchemaModel):
     totals: UsageTotals
     recentRuns: list[UsageRun]
 
 
-class OpenAIDebugResponse(BaseModel):
+class OpenAIDebugResponse(StrictSchemaModel):
     configured: bool
     model: str
     status: Literal['ok', 'error']
@@ -96,7 +100,7 @@ class OpenAIDebugResponse(BaseModel):
     errorType: str | None = None
 
 
-class AnalysisResponse(BaseModel):
+class AnalysisResponse(StrictSchemaModel):
     documents: list[UploadedDocument]
     parties: list[PartyResult]
     globalIssues: list[GlobalIssue]

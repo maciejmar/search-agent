@@ -2,13 +2,14 @@ import json
 import os
 from textwrap import shorten
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas import GlobalIssue, OpenAIDebugResponse, PartyResult, UsageSummary
 from app.services.document_reader import ExtractedDocument
 
 
 class LLMAnalysisPayload(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     parties: list[PartyResult]
     globalIssues: list[GlobalIssue]
 
