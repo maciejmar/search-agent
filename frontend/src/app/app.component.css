@@ -97,7 +97,7 @@ h1 {
 }
 
 .tab-button--active {
-  background: linear-gradient(135deg, #3f7c2d 0%, #79aa43 100%);
+  background: linear-gradient(135deg, #4f2d7c 0%, #410a66 100%);
   border-color: #56338d;
   color: #ffffff;
 }
