@@ -86,6 +86,15 @@ interface UsageDashboard {
   recentRuns: UsageRun[];
 }
 
+interface OpenAIDebugResponse {
+  configured: boolean;
+  model: string;
+  status: 'ok' | 'error';
+  provider: 'openai';
+  message: string;
+  errorType: string | null;
+}
+
 interface AnalysisResponse {
   documents: UploadedDocument[];
   parties: PartyResult[];
@@ -107,10 +116,13 @@ export class AppComponent {
   selectedFiles: File[] = [];
   isSubmitting = false;
   isLoadingUsage = false;
+  isLoadingOpenAIDebug = false;
   errorMessage = '';
   usageErrorMessage = '';
+  openAIDebugErrorMessage = '';
   analysisResult: AnalysisResponse | null = null;
   usageDashboard: UsageDashboard | null = null;
+  openAIDebug: OpenAIDebugResponse | null = null;
 
   constructor() {
     this.loadUsageDashboard();
@@ -118,8 +130,13 @@ export class AppComponent {
 
   setActiveTab(tab: 'analysis' | 'usage'): void {
     this.activeTab = tab;
-    if (tab === 'usage' && !this.usageDashboard) {
-      this.loadUsageDashboard();
+    if (tab === 'usage') {
+      if (!this.usageDashboard) {
+        this.loadUsageDashboard();
+      }
+      if (!this.openAIDebug) {
+        this.loadOpenAIDebug();
+      }
     }
   }
 
@@ -153,6 +170,7 @@ export class AppComponent {
         this.analysisResult = response;
         this.isSubmitting = false;
         this.loadUsageDashboard();
+        this.loadOpenAIDebug();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = typeof error.error?.detail === 'string'
@@ -174,6 +192,21 @@ export class AppComponent {
       error: () => {
         this.usageErrorMessage = 'Nie uda\u0142o si\u0119 pobra\u0107 statystyk zu\u017cycia API.';
         this.isLoadingUsage = false;
+      }
+    });
+  }
+
+  loadOpenAIDebug(): void {
+    this.isLoadingOpenAIDebug = true;
+    this.openAIDebugErrorMessage = '';
+    this.http.get<OpenAIDebugResponse>('/api/debug/openai').subscribe({
+      next: (response) => {
+        this.openAIDebug = response;
+        this.isLoadingOpenAIDebug = false;
+      },
+      error: () => {
+        this.openAIDebugErrorMessage = 'Nie uda\u0142o si\u0119 pobra\u0107 diagnostyki OpenAI.';
+        this.isLoadingOpenAIDebug = false;
       }
     });
   }

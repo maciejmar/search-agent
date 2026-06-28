@@ -4,7 +4,7 @@ from textwrap import shorten
 
 from pydantic import BaseModel
 
-from app.schemas import GlobalIssue, PartyResult, UsageSummary
+from app.schemas import GlobalIssue, OpenAIDebugResponse, PartyResult, UsageSummary
 from app.services.document_reader import ExtractedDocument
 
 
@@ -24,19 +24,16 @@ If no parties can be identified, return an empty parties list and one warning in
 '''
 
 
+DIAGNOSTIC_PROMPT = 'Reply with a short JSON object: {"status":"ok"}.'
+
+
 def is_openai_configured() -> bool:
     return bool(os.getenv('OPENAI_API_KEY'))
 
 
 
 def analyze_documents_with_openai(documents: list[ExtractedDocument]) -> tuple[list[PartyResult], list[GlobalIssue], UsageSummary]:
-    from openai import OpenAI
-
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        raise RuntimeError('OPENAI_API_KEY is not configured')
-
-    client = OpenAI(api_key=api_key)
+    client = _build_client()
     model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     response = client.responses.create(
         model=model,
@@ -76,6 +73,64 @@ def analyze_documents_with_openai(documents: list[ExtractedDocument]) -> tuple[l
     parsed = LLMAnalysisPayload.model_validate(payload)
     usage = _build_usage_summary(response, model)
     return parsed.parties, parsed.globalIssues, usage
+
+
+
+def run_openai_diagnostic() -> OpenAIDebugResponse:
+    model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+    if not is_openai_configured():
+        return OpenAIDebugResponse(
+            configured=False,
+            model=model,
+            status='error',
+            message='OPENAI_API_KEY nie jest ustawiony.',
+            errorType='RuntimeError',
+        )
+
+    try:
+        client = _build_client()
+        response = client.responses.create(
+            model=model,
+            temperature=0,
+            max_output_tokens=32,
+            input=DIAGNOSTIC_PROMPT,
+        )
+        output = (getattr(response, 'output_text', '') or '').strip()
+        return OpenAIDebugResponse(
+            configured=True,
+            model=model,
+            status='ok',
+            message=f'Po\u0142\u0105czenie z OpenAI dzia\u0142a. Odpowied\u017a diagnostyczna: {output[:120]}',
+            errorType=None,
+        )
+    except Exception as error:
+        return OpenAIDebugResponse(
+            configured=True,
+            model=model,
+            status='error',
+            message=f'Po\u0142\u0105czenie z OpenAI nie powiod\u0142o si\u0119: {summarize_openai_error(error)}',
+            errorType=error.__class__.__name__,
+        )
+
+
+
+def summarize_openai_error(error: Exception) -> str:
+    message = str(error).strip()
+    message = ' '.join(message.split())
+    if not message:
+        return error.__class__.__name__
+    shortened = shorten(message, width=220, placeholder='...')
+    return f'{error.__class__.__name__}: {shortened}'
+
+
+
+def _build_client():
+    from openai import OpenAI
+
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise RuntimeError('OPENAI_API_KEY is not configured')
+    return OpenAI(api_key=api_key)
 
 
 

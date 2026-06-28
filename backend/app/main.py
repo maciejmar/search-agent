@@ -2,8 +2,9 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.graph.analysis_graph import analyze_with_graph
-from app.schemas import AnalysisResponse, UsageDashboard
+from app.schemas import AnalysisResponse, OpenAIDebugResponse, UsageDashboard
 from app.services.document_reader import extract_document_text
+from app.services.openai_analysis import run_openai_diagnostic
 from app.services.usage_tracker import usage_tracker
 
 app = FastAPI(title='Notarial Consistency Analyzer')
@@ -29,6 +30,11 @@ def health() -> dict[str, str]:
 @app.get('/api/usage', response_model=UsageDashboard)
 def usage_dashboard() -> UsageDashboard:
     return usage_tracker.get_dashboard()
+
+
+@app.get('/api/debug/openai', response_model=OpenAIDebugResponse)
+def debug_openai() -> OpenAIDebugResponse:
+    return run_openai_diagnostic()
 
 
 @app.post('/api/analyze', response_model=AnalysisResponse)

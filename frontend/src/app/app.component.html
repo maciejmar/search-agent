@@ -167,10 +167,44 @@
     }
   } @else {
     <section class="results">
-      <div class="results__summary">
-        <h2>Zu&#380;ycie API</h2>
-        <p>Podgl&#261;d ostatnich wywo&#322;a&#324; modelu, token&oacute;w i szacowanego kosztu.</p>
+      <div class="results__summary results__summary--split">
+        <div>
+          <h2>Zu&#380;ycie API</h2>
+          <p>Podgl&#261;d ostatnich wywo&#322;a&#324; modelu, token&oacute;w i szacowanego kosztu.</p>
+        </div>
+        <button type="button" class="secondary-button" (click)="loadOpenAIDebug()" [disabled]="isLoadingOpenAIDebug">
+          @if (isLoadingOpenAIDebug) {
+            Sprawdzanie...
+          } @else {
+            Sprawd&#378; OpenAI
+          }
+        </button>
       </div>
+
+      @if (openAIDebugErrorMessage) {
+        <div class="feedback feedback--error usage-dashboard">{{ openAIDebugErrorMessage }}</div>
+      }
+
+      @if (openAIDebug) {
+        <section class="diagnostic-card" [class.diagnostic-card--error]="openAIDebug.status === 'error'" [class.diagnostic-card--ok]="openAIDebug.status === 'ok'">
+          <div class="diagnostic-card__header">
+            <div>
+              <p class="diagnostic-card__eyebrow">Diagnostyka OpenAI</p>
+              <h3>{{ openAIDebug.status === 'ok' ? 'Po&#322;&#261;czenie aktywne' : 'B&#322;&#261;d po&#322;&#261;czenia' }}</h3>
+            </div>
+            <span class="run-badge" [class.run-badge--success]="openAIDebug.status === 'ok'" [class.run-badge--error]="openAIDebug.status === 'error'">
+              {{ openAIDebug.status }}
+            </span>
+          </div>
+          <div class="diagnostic-grid">
+            <span>Provider: <strong>{{ openAIDebug.provider }}</strong></span>
+            <span>Model: <strong>{{ openAIDebug.model }}</strong></span>
+            <span>Configured: <strong>{{ openAIDebug.configured ? 'tak' : 'nie' }}</strong></span>
+            <span>Error type: <strong>{{ openAIDebug.errorType || 'brak' }}</strong></span>
+          </div>
+          <p class="diagnostic-message">{{ openAIDebug.message }}</p>
+        </section>
+      }
 
       @if (usageErrorMessage) {
         <div class="feedback feedback--error usage-dashboard">{{ usageErrorMessage }}</div>

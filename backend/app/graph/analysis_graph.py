@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import TypedDict
 
@@ -6,8 +7,10 @@ from langgraph.graph import END, START, StateGraph
 from app.schemas import AnalysisResponse, GlobalIssue, UploadedDocument, UsageRun, UsageSummary
 from app.services.document_reader import ExtractedDocument
 from app.services.notary_analysis import analyze_documents as analyze_documents_heuristically
-from app.services.openai_analysis import analyze_documents_with_openai, is_openai_configured
+from app.services.openai_analysis import analyze_documents_with_openai, is_openai_configured, summarize_openai_error
 from app.services.usage_tracker import usage_tracker
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisState(TypedDict):
@@ -30,12 +33,14 @@ def run_analysis(state: AnalysisState) -> AnalysisState:
         error = raised_error
         analysis_mode = 'heuristic_fallback'
         status = 'fallback'
+        reason = summarize_openai_error(raised_error)
+        logger.exception('OpenAI analysis failed; using heuristic fallback. reason=%s', reason)
         parties, global_issues = analyze_documents_heuristically(state['documents'])
         global_issues.insert(
             0,
             GlobalIssue(
                 severity='warning',
-                message=f'Analiza OpenAI API by\u0142a niedost\u0119pna, u\u017cyto fallbacku heurystycznego: {raised_error.__class__.__name__}.',
+                message=f'Analiza OpenAI API by\u0142a niedost\u0119pna, u\u017cyto fallbacku heurystycznego. Pow\u00f3d: {reason}.',
                 documents=[document.name for document in state['documents']],
             ),
         )

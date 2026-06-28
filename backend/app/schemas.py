@@ -87,6 +87,15 @@ class UsageDashboard(BaseModel):
     recentRuns: list[UsageRun]
 
 
+class OpenAIDebugResponse(BaseModel):
+    configured: bool
+    model: str
+    status: Literal['ok', 'error']
+    provider: Literal['openai'] = 'openai'
+    message: str
+    errorType: str | None = None
+
+
 class AnalysisResponse(BaseModel):
     documents: list[UploadedDocument]
     parties: list[PartyResult]
