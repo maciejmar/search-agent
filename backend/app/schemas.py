@@ -9,17 +9,22 @@ class StrictSchemaModel(BaseModel):
 
 class UserSummary(StrictSchemaModel):
     id: int
+    username: str
     email: EmailStr
     fullName: str
+    role: Literal['admin', 'user']
 
 
 class AuthRequest(StrictSchemaModel):
-    email: EmailStr
+    identifier: str
     password: str
 
 
-class RegisterRequest(AuthRequest):
+class RegisterRequest(StrictSchemaModel):
+    username: str
+    email: EmailStr
     fullName: str
+    password: str
 
 
 class AuthResponse(StrictSchemaModel):
@@ -90,6 +95,7 @@ class UsageRun(StrictSchemaModel):
     mode: str
     model: str
     requesterName: str
+    requesterUsername: str
     requesterEmail: EmailStr
     documentNames: list[str] = Field(default_factory=list)
     inputTokens: int = 0

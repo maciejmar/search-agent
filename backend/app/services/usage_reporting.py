@@ -27,6 +27,7 @@ def record_usage_run(
     usage_log = UsageLog(
         user_id=user.id,
         requester_name=user.full_name,
+        requester_username=user.username,
         requester_email=user.email,
         timestamp=datetime.now(timezone.utc),
         provider=provider,
@@ -48,27 +49,23 @@ def record_usage_run(
 
 
 
-def get_user_dashboard(db: Session, user: User, limit: int = 100) -> UsageDashboard:
-    logs = (
-        db.query(UsageLog)
-        .filter(UsageLog.user_id == user.id)
-        .order_by(UsageLog.timestamp.desc())
-        .limit(limit)
-        .all()
+def get_usage_dashboard(db: Session, user: User, limit: int = 100) -> UsageDashboard:
+    query = db.query(UsageLog)
+    totals_query = db.query(
+        func.count(UsageLog.id),
+        func.coalesce(func.sum(UsageLog.input_tokens), 0),
+        func.coalesce(func.sum(UsageLog.output_tokens), 0),
+        func.coalesce(func.sum(UsageLog.total_tokens), 0),
+        func.coalesce(func.sum(UsageLog.cached_input_tokens), 0),
+        func.coalesce(func.sum(UsageLog.estimated_cost_usd), 0.0),
     )
 
-    totals_row = (
-        db.query(
-            func.count(UsageLog.id),
-            func.coalesce(func.sum(UsageLog.input_tokens), 0),
-            func.coalesce(func.sum(UsageLog.output_tokens), 0),
-            func.coalesce(func.sum(UsageLog.total_tokens), 0),
-            func.coalesce(func.sum(UsageLog.cached_input_tokens), 0),
-            func.coalesce(func.sum(UsageLog.estimated_cost_usd), 0.0),
-        )
-        .filter(UsageLog.user_id == user.id)
-        .one()
-    )
+    if user.role != 'admin':
+        query = query.filter(UsageLog.user_id == user.id)
+        totals_query = totals_query.filter(UsageLog.user_id == user.id)
+
+    logs = query.order_by(UsageLog.timestamp.desc()).limit(limit).all()
+    totals_row = totals_query.one()
 
     totals = UsageTotals(
         requestCount=int(totals_row[0] or 0),
@@ -80,7 +77,7 @@ def get_user_dashboard(db: Session, user: User, limit: int = 100) -> UsageDashbo
     )
 
     return UsageDashboard(
-        user=UserSummary(id=user.id, email=user.email, fullName=user.full_name),
+        user=UserSummary(id=user.id, username=user.username, email=user.email, fullName=user.full_name, role=user.role),
         totals=totals,
         recentRuns=[_to_usage_run(log) for log in logs],
     )
@@ -94,6 +91,7 @@ def _to_usage_run(log: UsageLog) -> UsageRun:
         mode=log.mode,
         model=log.model,
         requesterName=log.requester_name,
+        requesterUsername=log.requester_username,
         requesterEmail=log.requester_email,
         documentNames=log.document_names,
         inputTokens=log.input_tokens,

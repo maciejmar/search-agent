@@ -13,8 +13,8 @@
         <p class="eyebrow">Analiza aktu notarialnego</p>
         <h1>Sprawd&#378; zgodno&#347;&#263; danych stron i rozliczaj koszt per u&#380;ytkownik</h1>
         <p class="lead">
-          Ka&#380;dy request jest przypisany do zalogowanego u&#380;ytkownika. W raporcie zobaczysz,
-          kto uruchomi&#322; analiz&#281;, ile kosztowa&#322;a i jaka jest suma koszt&oacute;w na jego koncie.
+          Konto z loginem <strong>mm-admin</strong>, utworzone jako pierwsze konto admina, dostaje rol&#281; administratora.
+          Na pozosta&#322;ych kontach rola to <strong>user</strong>. Tylko admin widzi raport koszt&oacute;w i diagnostyk&#281; OpenAI.
         </p>
       </div>
 
@@ -29,17 +29,24 @@
         </div>
 
         <div class="auth-form">
+          <label class="auth-label">
+            <span>Login</span>
+            <input class="auth-input" type="text" [(ngModel)]="authUsername" name="username" />
+          </label>
+
           @if (authMode === 'register') {
             <label class="auth-label">
               <span>Imi&#281; i nazwisko</span>
               <input class="auth-input" type="text" [(ngModel)]="authFullName" name="fullName" />
             </label>
-          }
 
-          <label class="auth-label">
-            <span>Email</span>
-            <input class="auth-input" type="email" [(ngModel)]="authEmail" name="email" />
-          </label>
+            <label class="auth-label">
+              <span>Email</span>
+              <input class="auth-input" type="email" [(ngModel)]="authEmail" name="email" />
+            </label>
+          } @else {
+            <p class="topbar__meta">Mo&#380;esz wpisa&#263; login albo email.</p>
+          }
 
           <label class="auth-label">
             <span>Has&#322;o</span>
@@ -65,7 +72,7 @@
       <div>
         <p class="eyebrow">Zalogowany u&#380;ytkownik</p>
         <h2>{{ currentUser.fullName }}</h2>
-        <p class="topbar__meta">{{ currentUser.email }}</p>
+        <p class="topbar__meta">{{ currentUser.username }} | {{ currentUser.email }} | rola: {{ currentUser.role }}</p>
       </div>
       <button type="button" class="secondary-button" (click)="logout()">Wyloguj</button>
     </section>
@@ -85,9 +92,11 @@
           <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'analysis'" (click)="setActiveTab('analysis')">
             Analiza
           </button>
-          <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
-            Zu&#380;ycie API
-          </button>
+          @if (isAdmin) {
+            <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
+              Zu&#380;ycie API
+            </button>
+          }
         </div>
 
         <label class="upload-zone" for="file-upload">
@@ -132,7 +141,7 @@
             <p>{{ analysisResult.summary }}</p>
           </div>
 
-          @if (analysisResult.usage) {
+          @if (analysisResult.usage && isAdmin) {
             <section class="usage-strip">
               <article class="usage-stat">
                 <span>Tryb analizy</span>
@@ -241,7 +250,7 @@
         <div class="results__summary results__summary--split">
           <div>
             <h2>Raport koszt&oacute;w</h2>
-            <p>Widzisz tylko requesty przypisane do Twojego konta.</p>
+            <p>Administrator widzi globalne koszty i requesty wszystkich u&#380;ytkownik&oacute;w.</p>
           </div>
           <button type="button" class="secondary-button" (click)="loadOpenAIDebug()" [disabled]="isLoadingOpenAIDebug">
             @if (isLoadingOpenAIDebug) {
@@ -255,15 +264,15 @@
         @if (usageDashboard) {
           <section class="account-card">
             <article class="usage-stat">
-              <span>U&#380;ytkownik</span>
+              <span>Admin</span>
               <strong>{{ usageDashboard.user.fullName }}</strong>
             </article>
             <article class="usage-stat">
-              <span>Email</span>
-              <strong>{{ usageDashboard.user.email }}</strong>
+              <span>Login</span>
+              <strong>{{ usageDashboard.user.username }}</strong>
             </article>
             <article class="usage-stat">
-              <span>Suma na rachunku</span>
+              <span>Suma wszystkich koszt&oacute;w</span>
               <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }} USD</strong>
             </article>
           </section>
@@ -337,7 +346,7 @@
                       {{ run.status }}
                     </span>
                   </div>
-                  <p>Request rzuci&#322;: {{ run.requesterName }} ({{ run.requesterEmail }})</p>
+                  <p>Request rzuci&#322;: {{ run.requesterName }} ({{ run.requesterUsername }} | {{ run.requesterEmail }})</p>
                   <p>Tryb: {{ run.mode }}</p>
                   <p>Dokumenty: {{ run.documentNames.join(', ') || 'brak' }}</p>
                   @if (run.fallbackReason) {
@@ -353,7 +362,7 @@
               }
             </div>
           } @else {
-            <div class="empty-state">Brak zapisanej historii request&oacute;w dla tego konta.</div>
+            <div class="empty-state">Brak zapisanej historii request&oacute;w.</div>
           }
         }
       </section>

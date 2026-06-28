@@ -5,8 +5,10 @@ import { FormsModule } from '@angular/forms';
 
 interface UserSummary {
   id: number;
+  username: string;
   email: string;
   fullName: string;
+  role: 'admin' | 'user';
 }
 
 interface AuthResponse {
@@ -77,6 +79,7 @@ interface UsageRun {
   mode: string;
   model: string;
   requesterName: string;
+  requesterUsername: string;
   requesterEmail: string;
   documentNames: string[];
   inputTokens: number;
@@ -139,6 +142,7 @@ export class AppComponent {
   isLoadingUsage = false;
   isLoadingOpenAIDebug = false;
 
+  authUsername = '';
   authFullName = '';
   authEmail = '';
   authPassword = '';
@@ -157,6 +161,10 @@ export class AppComponent {
     this.restoreSession();
   }
 
+  get isAdmin(): boolean {
+    return this.currentUser?.role === 'admin';
+  }
+
   setAuthMode(mode: 'login' | 'register'): void {
     this.authMode = mode;
     this.authErrorMessage = '';
@@ -168,8 +176,8 @@ export class AppComponent {
 
     const endpoint = this.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
     const payload = this.authMode === 'register'
-      ? { email: this.authEmail, password: this.authPassword, fullName: this.authFullName }
-      : { email: this.authEmail, password: this.authPassword };
+      ? { username: this.authUsername, email: this.authEmail, password: this.authPassword, fullName: this.authFullName }
+      : { identifier: this.authUsername, password: this.authPassword };
 
     this.http.post<AuthResponse>(endpoint, payload).subscribe({
       next: (response) => {
@@ -199,8 +207,11 @@ export class AppComponent {
   }
 
   setActiveTab(tab: 'analysis' | 'usage'): void {
+    if (tab === 'usage' && !this.isAdmin) {
+      return;
+    }
     this.activeTab = tab;
-    if (tab === 'usage' && this.currentUser) {
+    if (tab === 'usage' && this.currentUser && this.isAdmin) {
       this.loadUsageDashboard();
       this.loadOpenAIDebug();
     }
@@ -239,8 +250,10 @@ export class AppComponent {
       next: (response) => {
         this.analysisResult = response;
         this.isSubmitting = false;
-        this.loadUsageDashboard();
-        this.loadOpenAIDebug();
+        if (this.isAdmin) {
+          this.loadUsageDashboard();
+          this.loadOpenAIDebug();
+        }
       },
       error: (error: HttpErrorResponse) => {
         this.handleProtectedError(error, 'Nie uda\u0142o si\u0119 przeanalizowa\u0107 dokument\u00f3w.');
@@ -250,7 +263,7 @@ export class AppComponent {
   }
 
   loadUsageDashboard(): void {
-    if (!this.currentUser) {
+    if (!this.currentUser || !this.isAdmin) {
       return;
     }
     this.isLoadingUsage = true;
@@ -268,7 +281,7 @@ export class AppComponent {
   }
 
   loadOpenAIDebug(): void {
-    if (!this.currentUser) {
+    if (!this.currentUser || !this.isAdmin) {
       return;
     }
     this.isLoadingOpenAIDebug = true;
@@ -311,8 +324,10 @@ export class AppComponent {
       next: (user) => {
         this.currentUser = user;
         this.isRestoringSession = false;
-        this.loadUsageDashboard();
-        this.loadOpenAIDebug();
+        if (this.isAdmin) {
+          this.loadUsageDashboard();
+          this.loadOpenAIDebug();
+        }
       },
       error: () => {
         localStorage.removeItem(this.tokenStorageKey);
@@ -328,8 +343,10 @@ export class AppComponent {
     this.authErrorMessage = '';
     this.isAuthenticating = false;
     this.isRestoringSession = false;
-    this.loadUsageDashboard();
-    this.loadOpenAIDebug();
+    if (this.isAdmin) {
+      this.loadUsageDashboard();
+      this.loadOpenAIDebug();
+    }
   }
 
   private authHeaders(tokenOverride?: string): HttpHeaders {
