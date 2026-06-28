@@ -8,10 +8,10 @@
   min-height: 100vh;
   padding: 40px 20px 64px;
   background:
-    radial-gradient(circle at 14% 18%, rgba(46, 1, 24, 0.2), transparent 24%),
-    radial-gradient(circle at 78% 22%, rgba(0, 2, 85, 0.24), transparent 26%),
+    radial-gradient(circle at 14% 18%, rgba(14, 4, 37, 0.2), transparent 24%),
+    radial-gradient(circle at 78% 22%, rgba(1, 2, 37, 0.24), transparent 26%),
     radial-gradient(circle at 72% 78%, rgba(19, 1, 26, 0.2), transparent 24%),
-    linear-gradient(135deg, #1f2328 0%, #130731 46%, #0f0108 100%);
+    linear-gradient(135deg, #1f2328 0%, #110236 46%, #04011d 100%);
 }
 
 .hero,
