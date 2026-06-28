@@ -1,269 +1,362 @@
 <main class="page">
-  <section class="hero">
-    <div class="hero__copy">
-      <p class="eyebrow">Analiza aktu notarialnego</p>
-      <h1>Sprawd&#378; zgodno&#347;&#263; danych stron w dokumentach</h1>
-      <p class="lead">
-        Wrzu&#263; jeden lub kilka dokument&oacute;w, a backend przeanalizuje wskazane dane stron i wykryje miejsca,
-        w kt&oacute;rych PESEL, NIP, KRS, numer dowodu lub adres przestaj&#261; by&#263; sp&oacute;jne.
-      </p>
-    </div>
-
-    <div class="upload-card">
-      <div class="tab-row">
-        <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'analysis'" (click)="setActiveTab('analysis')">
-          Analiza
-        </button>
-        <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
-          Zu&#380;ycie API
-        </button>
+  @if (isRestoringSession) {
+    <section class="auth-shell auth-shell--centered">
+      <div class="auth-card">
+        <p class="eyebrow">Search Agent</p>
+        <h1>Przywracanie sesji</h1>
+        <p class="lead">Sprawdzam dane logowania i przygotowuj&#281; raport koszt&oacute;w.</p>
+      </div>
+    </section>
+  } @else if (!currentUser) {
+    <section class="auth-shell">
+      <div class="hero__copy auth-copy">
+        <p class="eyebrow">Analiza aktu notarialnego</p>
+        <h1>Sprawd&#378; zgodno&#347;&#263; danych stron i rozliczaj koszt per u&#380;ytkownik</h1>
+        <p class="lead">
+          Ka&#380;dy request jest przypisany do zalogowanego u&#380;ytkownika. W raporcie zobaczysz,
+          kto uruchomi&#322; analiz&#281;, ile kosztowa&#322;a i jaka jest suma koszt&oacute;w na jego koncie.
+        </p>
       </div>
 
-      <label class="upload-zone" for="file-upload">
-        <input id="file-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt" (change)="onFilesSelected($event)" />
-        <span class="upload-title">Dodaj dokumenty</span>
-        <span class="upload-subtitle">Obs&#322;ugiwane formaty: PDF, DOC, DOCX, TXT</span>
-      </label>
+      <section class="auth-card">
+        <div class="tab-row">
+          <button type="button" class="tab-button" [class.tab-button--active]="authMode === 'login'" (click)="setAuthMode('login')">
+            Logowanie
+          </button>
+          <button type="button" class="tab-button" [class.tab-button--active]="authMode === 'register'" (click)="setAuthMode('register')">
+            Rejestracja
+          </button>
+        </div>
 
-      @if (selectedFiles.length) {
-        <div class="file-list">
-          @for (file of selectedFiles; track file.name + file.size) {
-            <div class="file-chip">
-              <div>
-                <strong>{{ file.name }}</strong>
-                <span>{{ file.size }} B</span>
-              </div>
-              <button type="button" (click)="removeFile($index)">Usu&#324;</button>
-            </div>
+        <div class="auth-form">
+          @if (authMode === 'register') {
+            <label class="auth-label">
+              <span>Imi&#281; i nazwisko</span>
+              <input class="auth-input" type="text" [(ngModel)]="authFullName" name="fullName" />
+            </label>
           }
-        </div>
-      }
 
-      <button class="primary-button" type="button" (click)="analyzeDocuments()" [disabled]="isSubmitting">
-        @if (isSubmitting) {
-          Analizowanie...
-        } @else {
-          Analizuj zgodno&#347;&#263; danych
-        }
-      </button>
+          <label class="auth-label">
+            <span>Email</span>
+            <input class="auth-input" type="email" [(ngModel)]="authEmail" name="email" />
+          </label>
 
-      @if (errorMessage) {
-        <p class="feedback feedback--error">{{ errorMessage }}</p>
-      }
-    </div>
-  </section>
-
-  @if (activeTab === 'analysis') {
-    @if (analysisResult) {
-      <section class="results">
-        <div class="results__summary">
-          <h2>Wynik analizy</h2>
-          <p>{{ analysisResult.summary }}</p>
+          <label class="auth-label">
+            <span>Has&#322;o</span>
+            <input class="auth-input" type="password" [(ngModel)]="authPassword" name="password" />
+          </label>
         </div>
 
-        @if (analysisResult.usage) {
-          <section class="usage-strip">
-            <article class="usage-stat">
-              <span>Tryb analizy</span>
-              <strong>{{ analysisResult.usage.mode }}</strong>
-            </article>
-            <article class="usage-stat">
-              <span>Model</span>
-              <strong>{{ analysisResult.usage.model }}</strong>
-            </article>
-            <article class="usage-stat">
-              <span>Input</span>
-              <strong>{{ analysisResult.usage.inputTokens }}</strong>
-            </article>
-            <article class="usage-stat">
-              <span>Output</span>
-              <strong>{{ analysisResult.usage.outputTokens }}</strong>
-            </article>
-            <article class="usage-stat">
-              <span>Koszt USD</span>
-              <strong>{{ formatUsd(analysisResult.usage.estimatedCostUsd) }}</strong>
-            </article>
-          </section>
-        }
-
-        <div class="document-grid">
-          @for (document of analysisResult.documents; track document.fileName) {
-            <article class="document-card">
-              <p class="document-card__label">Dokument</p>
-              <h3>{{ document.fileName }}</h3>
-              <p>Format: {{ document.fileType }}</p>
-              <p>Znaki po ekstrakcji: {{ document.charCount }}</p>
-            </article>
+        <button class="primary-button" type="button" (click)="submitAuth()" [disabled]="isAuthenticating">
+          @if (isAuthenticating) {
+            Trwa wysy&#322;anie...
+          } @else {
+            {{ authMode === 'login' ? 'Zaloguj si\u0119' : 'Utw\u00f3rz konto' }}
           }
+        </button>
+
+        @if (authErrorMessage) {
+          <p class="feedback feedback--error">{{ authErrorMessage }}</p>
+        }
+      </section>
+    </section>
+  } @else {
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Zalogowany u&#380;ytkownik</p>
+        <h2>{{ currentUser.fullName }}</h2>
+        <p class="topbar__meta">{{ currentUser.email }}</p>
+      </div>
+      <button type="button" class="secondary-button" (click)="logout()">Wyloguj</button>
+    </section>
+
+    <section class="hero">
+      <div class="hero__copy">
+        <p class="eyebrow">Analiza aktu notarialnego</p>
+        <h1>Sprawd&#378; zgodno&#347;&#263; danych stron w dokumentach</h1>
+        <p class="lead">
+          Wrzu&#263; jeden lub kilka dokument&oacute;w, a backend przeanalizuje wskazane dane stron i wykryje miejsca,
+          w kt&oacute;rych PESEL, NIP, KRS, numer dowodu lub adres przestaj&#261; by&#263; sp&oacute;jne.
+        </p>
+      </div>
+
+      <div class="upload-card">
+        <div class="tab-row">
+          <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'analysis'" (click)="setActiveTab('analysis')">
+            Analiza
+          </button>
+          <button type="button" class="tab-button" [class.tab-button--active]="activeTab === 'usage'" (click)="setActiveTab('usage')">
+            Zu&#380;ycie API
+          </button>
         </div>
 
-        @if (analysisResult.globalIssues.length) {
-          <div class="global-issues">
-            @for (issue of analysisResult.globalIssues; track issue.message) {
-              <div class="feedback" [class.feedback--warn]="issue.severity === 'warning'" [class.feedback--info]="issue.severity === 'info'" [class.feedback--error]="issue.severity === 'error'">
-                <strong>{{ issue.message }}</strong>
-                @if (issue.documents.length) {
-                  <span>Dokumenty: {{ issue.documents.join(', ') }}</span>
-                }
+        <label class="upload-zone" for="file-upload">
+          <input id="file-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt" (change)="onFilesSelected($event)" />
+          <span class="upload-title">Dodaj dokumenty</span>
+          <span class="upload-subtitle">Obs&#322;ugiwane formaty: PDF, DOC, DOCX, TXT</span>
+        </label>
+
+        @if (selectedFiles.length) {
+          <div class="file-list">
+            @for (file of selectedFiles; track file.name + file.size) {
+              <div class="file-chip">
+                <div>
+                  <strong>{{ file.name }}</strong>
+                  <span>{{ file.size }} B</span>
+                </div>
+                <button type="button" (click)="removeFile($index)">Usu&#324;</button>
               </div>
             }
           </div>
         }
 
-        <div class="party-list">
-          @for (party of analysisResult.parties; track trackParty($index, party)) {
-            <article class="party-card">
-              <div class="party-card__header">
-                <div>
-                  <p class="party-type">{{ party.partyType }}</p>
-                  <h3>{{ party.displayName }}</h3>
-                </div>
-                <span class="party-docs">{{ party.documents.join(', ') }}</span>
-              </div>
-
-              @if (party.issues.length) {
-                <div class="issue-list">
-                  @for (issue of party.issues; track issue.field + issue.message) {
-                    <div class="feedback feedback--error">
-                      <strong>{{ issue.message }}</strong>
-                      <span>Pole: {{ issue.field }}</span>
-                      <span>Warto&#347;ci: {{ issue.variants.join(' | ') }}</span>
-                    </div>
-                  }
-                </div>
-              } @else {
-                <div class="feedback feedback--success">Nie wykryto niesp&oacute;jno&#347;ci dla tej strony.</div>
-              }
-
-              <div class="field-table">
-                @for (field of party.fields; track field.field) {
-                  <div class="field-row">
-                    <div class="field-row__meta">
-                      <strong>{{ field.field }}</strong>
-                      <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
-                        {{ field.consistent ? 'sp&oacute;jne' : 'r&oacute;&#380;ne warto&#347;ci' }}
-                      </span>
-                    </div>
-                    <div class="variant-list">
-                      @for (variant of field.variants; track variant.normalizedValue) {
-                        <div class="variant-card">
-                          <strong>{{ variant.value }}</strong>
-                          <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
-                          <span>Wyst&#261;pienia: {{ variant.occurrences }}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            </article>
-          }
-        </div>
-
-        @if (!analysisResult.parties.length) {
-          <div class="empty-state">Nie znaleziono danych stron, kt&oacute;re mo&#380;na by&#322;o por&oacute;wna&#263;.</div>
-        }
-      </section>
-    }
-  } @else {
-    <section class="results">
-      <div class="results__summary results__summary--split">
-        <div>
-          <h2>Zu&#380;ycie API</h2>
-          <p>Podgl&#261;d ostatnich wywo&#322;a&#324; modelu, token&oacute;w i szacowanego kosztu.</p>
-        </div>
-        <button type="button" class="secondary-button" (click)="loadOpenAIDebug()" [disabled]="isLoadingOpenAIDebug">
-          @if (isLoadingOpenAIDebug) {
-            Sprawdzanie...
+        <button class="primary-button" type="button" (click)="analyzeDocuments()" [disabled]="isSubmitting">
+          @if (isSubmitting) {
+            Analizowanie...
           } @else {
-            Sprawd&#378; OpenAI
+            Analizuj zgodno&#347;&#263; danych
           }
         </button>
+
+        @if (errorMessage) {
+          <p class="feedback feedback--error">{{ errorMessage }}</p>
+        }
       </div>
+    </section>
 
-      @if (openAIDebugErrorMessage) {
-        <div class="feedback feedback--error usage-dashboard">{{ openAIDebugErrorMessage }}</div>
-      }
-
-      @if (openAIDebug) {
-        <section class="diagnostic-card" [class.diagnostic-card--error]="openAIDebug.status === 'error'" [class.diagnostic-card--ok]="openAIDebug.status === 'ok'">
-          <div class="diagnostic-card__header">
-            <div>
-              <p class="diagnostic-card__eyebrow">Diagnostyka OpenAI</p>
-              <h3>{{ openAIDebug.status === 'ok' ? 'Po&#322;&#261;czenie aktywne' : 'B&#322;&#261;d po&#322;&#261;czenia' }}</h3>
-            </div>
-            <span class="run-badge" [class.run-badge--success]="openAIDebug.status === 'ok'" [class.run-badge--error]="openAIDebug.status === 'error'">
-              {{ openAIDebug.status }}
-            </span>
+    @if (activeTab === 'analysis') {
+      @if (analysisResult) {
+        <section class="results">
+          <div class="results__summary">
+            <h2>Wynik analizy</h2>
+            <p>{{ analysisResult.summary }}</p>
           </div>
-          <div class="diagnostic-grid">
-            <span>Provider: <strong>{{ openAIDebug.provider }}</strong></span>
-            <span>Model: <strong>{{ openAIDebug.model }}</strong></span>
-            <span>Configured: <strong>{{ openAIDebug.configured ? 'tak' : 'nie' }}</strong></span>
-            <span>Error type: <strong>{{ openAIDebug.errorType || 'brak' }}</strong></span>
+
+          @if (analysisResult.usage) {
+            <section class="usage-strip">
+              <article class="usage-stat">
+                <span>Tryb analizy</span>
+                <strong>{{ analysisResult.usage.mode }}</strong>
+              </article>
+              <article class="usage-stat">
+                <span>Model</span>
+                <strong>{{ analysisResult.usage.model }}</strong>
+              </article>
+              <article class="usage-stat">
+                <span>Input</span>
+                <strong>{{ analysisResult.usage.inputTokens }}</strong>
+              </article>
+              <article class="usage-stat">
+                <span>Output</span>
+                <strong>{{ analysisResult.usage.outputTokens }}</strong>
+              </article>
+              <article class="usage-stat">
+                <span>Koszt USD</span>
+                <strong>{{ formatUsd(analysisResult.usage.estimatedCostUsd) }}</strong>
+              </article>
+            </section>
+          }
+
+          <div class="document-grid">
+            @for (document of analysisResult.documents; track document.fileName) {
+              <article class="document-card">
+                <p class="document-card__label">Dokument</p>
+                <h3>{{ document.fileName }}</h3>
+                <p>Format: {{ document.fileType }}</p>
+                <p>Znaki po ekstrakcji: {{ document.charCount }}</p>
+              </article>
+            }
           </div>
-          <p class="diagnostic-message">{{ openAIDebug.message }}</p>
-        </section>
-      }
 
-      @if (usageErrorMessage) {
-        <div class="feedback feedback--error usage-dashboard">{{ usageErrorMessage }}</div>
-      }
-
-      @if (isLoadingUsage) {
-        <div class="empty-state">&#321;adowanie statystyk API...</div>
-      } @else if (usageDashboard) {
-        <section class="usage-strip usage-strip--dashboard">
-          <article class="usage-stat">
-            <span>Liczba wywo&#322;a&#324;</span>
-            <strong>{{ usageDashboard.totals.requestCount }}</strong>
-          </article>
-          <article class="usage-stat">
-            <span>Input tokens</span>
-            <strong>{{ usageDashboard.totals.totalInputTokens }}</strong>
-          </article>
-          <article class="usage-stat">
-            <span>Output tokens</span>
-            <strong>{{ usageDashboard.totals.totalOutputTokens }}</strong>
-          </article>
-          <article class="usage-stat">
-            <span>Cached input</span>
-            <strong>{{ usageDashboard.totals.totalCachedInputTokens }}</strong>
-          </article>
-          <article class="usage-stat">
-            <span>&#321;&#261;czny koszt USD</span>
-            <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }}</strong>
-          </article>
-        </section>
-
-        @if (usageDashboard.recentRuns.length) {
-          <div class="usage-run-list">
-            @for (run of usageDashboard.recentRuns; track run.timestamp + run.model) {
-              <article class="usage-run-card">
-                <div class="usage-run-card__header">
-                  <div>
-                    <h3>{{ run.model }}</h3>
-                    <p>{{ formatTimestamp(run.timestamp) }}</p>
-                  </div>
-                  <span class="run-badge" [class.run-badge--fallback]="run.status === 'fallback'" [class.run-badge--success]="run.status === 'success'" [class.run-badge--error]="run.status === 'error'">
-                    {{ run.status }}
-                  </span>
+          @if (analysisResult.globalIssues.length) {
+            <div class="global-issues">
+              @for (issue of analysisResult.globalIssues; track issue.message) {
+                <div class="feedback" [class.feedback--warn]="issue.severity === 'warning'" [class.feedback--info]="issue.severity === 'info'" [class.feedback--error]="issue.severity === 'error'">
+                  <strong>{{ issue.message }}</strong>
+                  @if (issue.documents.length) {
+                    <span>Dokumenty: {{ issue.documents.join(', ') }}</span>
+                  }
                 </div>
-                <p>Tryb: {{ run.mode }}</p>
-                <p>Dokumenty: {{ run.documentNames.join(', ') || 'brak' }}</p>
-                <div class="usage-run-grid">
-                  <span>Input: <strong>{{ run.inputTokens }}</strong></span>
-                  <span>Output: <strong>{{ run.outputTokens }}</strong></span>
-                  <span>Total: <strong>{{ run.totalTokens }}</strong></span>
-                  <span>Koszt USD: <strong>{{ formatUsd(run.estimatedCostUsd) }}</strong></span>
+              }
+            </div>
+          }
+
+          <div class="party-list">
+            @for (party of analysisResult.parties; track trackParty($index, party)) {
+              <article class="party-card">
+                <div class="party-card__header">
+                  <div>
+                    <p class="party-type">{{ party.partyType }}</p>
+                    <h3>{{ party.displayName }}</h3>
+                  </div>
+                  <span class="party-docs">{{ party.documents.join(', ') }}</span>
+                </div>
+
+                @if (party.issues.length) {
+                  <div class="issue-list">
+                    @for (issue of party.issues; track issue.field + issue.message) {
+                      <div class="feedback feedback--error">
+                        <strong>{{ issue.message }}</strong>
+                        <span>Pole: {{ issue.field }}</span>
+                        <span>Warto&#347;ci: {{ issue.variants.join(' | ') }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="feedback feedback--success">Nie wykryto niesp&oacute;jno&#347;ci dla tej strony.</div>
+                }
+
+                <div class="field-table">
+                  @for (field of party.fields; track field.field) {
+                    <div class="field-row">
+                      <div class="field-row__meta">
+                        <strong>{{ field.field }}</strong>
+                        <span [class.field-ok]="field.consistent" [class.field-bad]="!field.consistent">
+                          {{ field.consistent ? 'sp&oacute;jne' : 'r&oacute;&#380;ne warto&#347;ci' }}
+                        </span>
+                      </div>
+                      <div class="variant-list">
+                        @for (variant of field.variants; track variant.normalizedValue) {
+                          <div class="variant-card">
+                            <strong>{{ variant.value }}</strong>
+                            <span>Dokumenty: {{ variant.documents.join(', ') }}</span>
+                            <span>Wyst&#261;pienia: {{ variant.occurrences }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
               </article>
             }
           </div>
-        } @else {
-          <div class="empty-state">Brak zapisanej historii wywo&#322;a&#324; API.</div>
-        }
+
+          @if (!analysisResult.parties.length) {
+            <div class="empty-state">Nie znaleziono danych stron, kt&oacute;re mo&#380;na by&#322;o por&oacute;wna&#263;.</div>
+          }
+        </section>
       }
-    </section>
+    } @else {
+      <section class="results">
+        <div class="results__summary results__summary--split">
+          <div>
+            <h2>Raport koszt&oacute;w</h2>
+            <p>Widzisz tylko requesty przypisane do Twojego konta.</p>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadOpenAIDebug()" [disabled]="isLoadingOpenAIDebug">
+            @if (isLoadingOpenAIDebug) {
+              Sprawdzanie...
+            } @else {
+              Sprawd&#378; OpenAI
+            }
+          </button>
+        </div>
+
+        @if (usageDashboard) {
+          <section class="account-card">
+            <article class="usage-stat">
+              <span>U&#380;ytkownik</span>
+              <strong>{{ usageDashboard.user.fullName }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Email</span>
+              <strong>{{ usageDashboard.user.email }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Suma na rachunku</span>
+              <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }} USD</strong>
+            </article>
+          </section>
+        }
+
+        @if (openAIDebugErrorMessage) {
+          <div class="feedback feedback--error usage-dashboard">{{ openAIDebugErrorMessage }}</div>
+        }
+
+        @if (openAIDebug) {
+          <section class="diagnostic-card" [class.diagnostic-card--error]="openAIDebug.status === 'error'" [class.diagnostic-card--ok]="openAIDebug.status === 'ok'">
+            <div class="diagnostic-card__header">
+              <div>
+                <p class="diagnostic-card__eyebrow">Diagnostyka OpenAI</p>
+                <h3>{{ openAIDebug.status === 'ok' ? 'Po&#322;&#261;czenie aktywne' : 'B&#322;&#261;d po&#322;&#261;czenia' }}</h3>
+              </div>
+              <span class="run-badge" [class.run-badge--success]="openAIDebug.status === 'ok'" [class.run-badge--error]="openAIDebug.status === 'error'">
+                {{ openAIDebug.status }}
+              </span>
+            </div>
+            <div class="diagnostic-grid">
+              <span>Provider: <strong>{{ openAIDebug.provider }}</strong></span>
+              <span>Model: <strong>{{ openAIDebug.model }}</strong></span>
+              <span>Configured: <strong>{{ openAIDebug.configured ? 'tak' : 'nie' }}</strong></span>
+              <span>Error type: <strong>{{ openAIDebug.errorType || 'brak' }}</strong></span>
+            </div>
+            <p class="diagnostic-message">{{ openAIDebug.message }}</p>
+          </section>
+        }
+
+        @if (usageErrorMessage) {
+          <div class="feedback feedback--error usage-dashboard">{{ usageErrorMessage }}</div>
+        }
+
+        @if (isLoadingUsage) {
+          <div class="empty-state">&#321;adowanie raportu koszt&oacute;w...</div>
+        } @else if (usageDashboard) {
+          <section class="usage-strip usage-strip--dashboard">
+            <article class="usage-stat">
+              <span>Liczba request&oacute;w</span>
+              <strong>{{ usageDashboard.totals.requestCount }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Input tokens</span>
+              <strong>{{ usageDashboard.totals.totalInputTokens }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Output tokens</span>
+              <strong>{{ usageDashboard.totals.totalOutputTokens }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>Cached input</span>
+              <strong>{{ usageDashboard.totals.totalCachedInputTokens }}</strong>
+            </article>
+            <article class="usage-stat">
+              <span>&#321;&#261;czny koszt USD</span>
+              <strong>{{ formatUsd(usageDashboard.totals.totalCostUsd) }}</strong>
+            </article>
+          </section>
+
+          @if (usageDashboard.recentRuns.length) {
+            <div class="usage-run-list">
+              @for (run of usageDashboard.recentRuns; track run.timestamp + run.model + run.requesterEmail) {
+                <article class="usage-run-card">
+                  <div class="usage-run-card__header">
+                    <div>
+                      <h3>{{ run.model }}</h3>
+                      <p>{{ formatTimestamp(run.timestamp) }}</p>
+                    </div>
+                    <span class="run-badge" [class.run-badge--fallback]="run.status === 'fallback'" [class.run-badge--success]="run.status === 'success'" [class.run-badge--error]="run.status === 'error'">
+                      {{ run.status }}
+                    </span>
+                  </div>
+                  <p>Request rzuci&#322;: {{ run.requesterName }} ({{ run.requesterEmail }})</p>
+                  <p>Tryb: {{ run.mode }}</p>
+                  <p>Dokumenty: {{ run.documentNames.join(', ') || 'brak' }}</p>
+                  @if (run.fallbackReason) {
+                    <p>Pow&oacute;d fallbacku: {{ run.fallbackReason }}</p>
+                  }
+                  <div class="usage-run-grid">
+                    <span>Input: <strong>{{ run.inputTokens }}</strong></span>
+                    <span>Output: <strong>{{ run.outputTokens }}</strong></span>
+                    <span>Total: <strong>{{ run.totalTokens }}</strong></span>
+                    <span>Koszt USD: <strong>{{ formatUsd(run.estimatedCostUsd) }}</strong></span>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">Brak zapisanej historii request&oacute;w dla tego konta.</div>
+          }
+        }
+      </section>
+    }
   }
 </main>

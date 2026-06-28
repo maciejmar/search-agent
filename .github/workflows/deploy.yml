@@ -51,9 +51,14 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           TARGET_PATH="${DEPLOY_PATH:-/home/webaby/search-agent}"
-          ssh -i ~/.ssh/id_rsa -p 2222 "$DEPLOY_USER@95.158.64.196" "TARGET_PATH='$TARGET_PATH' OPENAI_API_KEY='$OPENAI_API_KEY' OPENAI_MODEL='$OPENAI_MODEL' bash -s" <<'EOF'
+          ssh -i ~/.ssh/id_rsa -p 2222 "$DEPLOY_USER@95.158.64.196" "TARGET_PATH='$TARGET_PATH' OPENAI_API_KEY='$OPENAI_API_KEY' OPENAI_MODEL='$OPENAI_MODEL' DATABASE_URL='$DATABASE_URL' JWT_SECRET='$JWT_SECRET' POSTGRES_DB='$POSTGRES_DB' POSTGRES_USER='$POSTGRES_USER' POSTGRES_PASSWORD='$POSTGRES_PASSWORD' bash -s" <<'EOF'
           set -e
           if [ -z "$TARGET_PATH" ] || [ "$TARGET_PATH" = "/" ]; then
             echo "Invalid TARGET_PATH: $TARGET_PATH"
@@ -66,6 +71,11 @@ jobs:
           {
             printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
             printf 'OPENAI_MODEL=%s\n' "${OPENAI_MODEL:-gpt-4o-mini}"
+            printf 'DATABASE_URL=%s\n' "$DATABASE_URL"
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'POSTGRES_DB=%s\n' "${POSTGRES_DB:-search_agent}"
+            printf 'POSTGRES_USER=%s\n' "${POSTGRES_USER:-search_agent}"
+            printf 'POSTGRES_PASSWORD=%s\n' "${POSTGRES_PASSWORD:-search_agent}"
           } > .env
           if docker compose version >/dev/null 2>&1; then
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans

@@ -1,13 +1,21 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from typing import Annotated
 
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+from app.auth import AuthError, authenticate_user, create_access_token, decode_token, register_user
+from app.database import Base, engine, get_db
 from app.graph.analysis_graph import analyze_with_graph
-from app.schemas import AnalysisResponse, OpenAIDebugResponse, UsageDashboard
+from app.models import User
+from app.schemas import AnalysisResponse, AuthRequest, AuthResponse, OpenAIDebugResponse, RegisterRequest, UsageDashboard, UserSummary
 from app.services.document_reader import extract_document_text
 from app.services.openai_analysis import run_openai_diagnostic
-from app.services.usage_tracker import usage_tracker
+from app.services.usage_reporting import get_user_dashboard
 
 app = FastAPI(title='Notarial Consistency Analyzer')
+security = HTTPBearer()
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,24 +29,81 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+Base.metadata.create_all(bind=engine)
+
+
+
+def _build_auth_response(user: User) -> AuthResponse:
+    return AuthResponse(
+        accessToken=create_access_token(user),
+        user=UserSummary(id=user.id, email=user.email, fullName=user.full_name),
+    )
+
+
+
+def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = int(payload['sub'])
+    except (AuthError, KeyError, ValueError) as error:
+        raise HTTPException(status_code=401, detail='Nieprawid\u0142owy token dost\u0119pu.') from error
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail='U\u017cytkownik nie istnieje.')
+    return user
+
 
 @app.get('/health')
 def health() -> dict[str, str]:
     return {'status': 'ok'}
 
 
+@app.post('/api/auth/register', response_model=AuthResponse)
+def register(payload: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> AuthResponse:
+    try:
+        user = register_user(db, payload.email, payload.fullName, payload.password)
+    except AuthError as error:
+        raise HTTPException(status_code=400, detail='U\u017cytkownik o takim emailu ju\u017c istnieje.') from error
+    return _build_auth_response(user)
+
+
+@app.post('/api/auth/login', response_model=AuthResponse)
+def login(payload: AuthRequest, db: Annotated[Session, Depends(get_db)]) -> AuthResponse:
+    try:
+        user = authenticate_user(db, payload.email, payload.password)
+    except AuthError as error:
+        raise HTTPException(status_code=401, detail='Nieprawid\u0142owy email lub has\u0142o.') from error
+    return _build_auth_response(user)
+
+
+@app.get('/api/me', response_model=UserSummary)
+def me(current_user: Annotated[User, Depends(get_current_user)]) -> UserSummary:
+    return UserSummary(id=current_user.id, email=current_user.email, fullName=current_user.full_name)
+
+
 @app.get('/api/usage', response_model=UsageDashboard)
-def usage_dashboard() -> UsageDashboard:
-    return usage_tracker.get_dashboard()
+def usage_dashboard(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> UsageDashboard:
+    return get_user_dashboard(db, current_user)
 
 
 @app.get('/api/debug/openai', response_model=OpenAIDebugResponse)
-def debug_openai() -> OpenAIDebugResponse:
+def debug_openai(current_user: Annotated[User, Depends(get_current_user)]) -> OpenAIDebugResponse:
     return run_openai_diagnostic()
 
 
 @app.post('/api/analyze', response_model=AnalysisResponse)
-async def analyze(files: list[UploadFile] = File(...)) -> AnalysisResponse:
+async def analyze(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    files: list[UploadFile] = File(...),
+) -> AnalysisResponse:
     if not files:
         raise HTTPException(status_code=400, detail='Brak plik\u00f3w do analizy.')
 
@@ -57,4 +122,4 @@ async def analyze(files: list[UploadFile] = File(...)) -> AnalysisResponse:
     if not extracted_documents:
         raise HTTPException(status_code=400, detail='Nie przes\u0142ano \u017cadnych niepustych plik\u00f3w.')
 
-    return analyze_with_graph(extracted_documents)
+    return analyze_with_graph(extracted_documents, current_user, db)

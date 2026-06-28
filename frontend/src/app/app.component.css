@@ -8,23 +8,30 @@
   min-height: 100vh;
   padding: 40px 20px 64px;
   background:
-    radial-gradient(circle at 14% 18%, rgba(14, 4, 37, 0.2), transparent 24%),
-    radial-gradient(circle at 78% 22%, rgba(1, 2, 37, 0.24), transparent 26%),
-    radial-gradient(circle at 72% 78%, rgba(19, 1, 26, 0.2), transparent 24%),
-    linear-gradient(135deg, #1f2328 0%, #110236 46%, #04011d 100%);
+    radial-gradient(circle at 14% 18%, rgba(124, 140, 132, 0.2), transparent 24%),
+    radial-gradient(circle at 78% 22%, rgba(98, 74, 132, 0.24), transparent 26%),
+    radial-gradient(circle at 72% 78%, rgba(72, 112, 84, 0.2), transparent 24%),
+    linear-gradient(135deg, #1f2328 0%, #2d2438 46%, #24352d 100%);
 }
 
+.auth-shell,
 .hero,
-.results {
+.results,
+.topbar {
   width: min(1180px, 100%);
   margin: 0 auto;
 }
 
+.auth-shell,
 .hero {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr;
   gap: 24px;
   align-items: start;
+}
+
+.auth-shell--centered {
+  grid-template-columns: 1fr;
 }
 
 .hero__copy,
@@ -33,7 +40,10 @@
 .document-card,
 .party-card,
 .usage-run-card,
-.diagnostic-card {
+.diagnostic-card,
+.auth-card,
+.topbar,
+.account-card {
   background: rgba(47, 54, 56, 0.84);
   border: 1px solid rgba(150, 163, 156, 0.2);
   border-radius: 28px;
@@ -41,8 +51,27 @@
   backdrop-filter: blur(14px);
 }
 
-.hero__copy {
+.hero__copy,
+.auth-card,
+.topbar {
   padding: 36px;
+}
+
+.auth-copy {
+  align-self: center;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.topbar__meta {
+  margin-bottom: 0;
+  color: #a9b2aa;
 }
 
 .eyebrow {
@@ -78,6 +107,28 @@ h1 {
 
 .upload-card {
   padding: 24px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #d6ddd7;
+  font-weight: 600;
+}
+
+.auth-input {
+  padding: 14px 16px;
+  border: 1px solid rgba(168, 177, 170, 0.2);
+  border-radius: 16px;
+  background: rgba(68, 75, 78, 0.88);
+  color: #f5f7f4;
 }
 
 .tab-row {
@@ -209,6 +260,7 @@ h1 {
   gap: 16px;
 }
 
+.account-card,
 .document-grid,
 .party-list,
 .usage-run-list,
@@ -217,6 +269,11 @@ h1 {
   display: grid;
   gap: 18px;
   margin-top: 18px;
+}
+
+.account-card {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 20px;
 }
 
 .document-grid {
@@ -404,6 +461,7 @@ h1 {
 }
 
 @media (max-width: 940px) {
+  .auth-shell,
   .hero {
     grid-template-columns: 1fr;
   }
@@ -419,7 +477,10 @@ h1 {
   .results__summary,
   .party-card,
   .usage-run-card,
-  .diagnostic-card {
+  .diagnostic-card,
+  .auth-card,
+  .topbar,
+  .account-card {
     padding: 20px;
     border-radius: 22px;
   }
@@ -428,6 +489,7 @@ h1 {
     padding: 20px;
   }
 
+  .topbar,
   .party-card__header,
   .field-row__meta,
   .file-chip,

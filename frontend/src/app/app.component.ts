@@ -1,6 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+interface UserSummary {
+  id: number;
+  email: string;
+  fullName: string;
+}
+
+interface AuthResponse {
+  accessToken: string;
+  tokenType: 'bearer';
+  user: UserSummary;
+}
 
 interface UploadedDocument {
   fileName: string;
@@ -63,6 +76,8 @@ interface UsageRun {
   provider: 'openai' | 'local';
   mode: string;
   model: string;
+  requesterName: string;
+  requesterEmail: string;
   documentNames: string[];
   inputTokens: number;
   outputTokens: number;
@@ -70,6 +85,7 @@ interface UsageRun {
   cachedInputTokens: number;
   estimatedCostUsd: number;
   status: 'success' | 'fallback' | 'error';
+  fallbackReason: string | null;
 }
 
 interface UsageTotals {
@@ -82,6 +98,7 @@ interface UsageTotals {
 }
 
 interface UsageDashboard {
+  user: UserSummary;
   totals: UsageTotals;
   recentRuns: UsageRun[];
 }
@@ -105,38 +122,87 @@ interface AnalysisResponse {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
   private readonly http = inject(HttpClient);
+  private readonly tokenStorageKey = 'search-agent-access-token';
 
   activeTab: 'analysis' | 'usage' = 'analysis';
+  authMode: 'login' | 'register' = 'login';
   selectedFiles: File[] = [];
   isSubmitting = false;
+  isAuthenticating = false;
+  isRestoringSession = true;
   isLoadingUsage = false;
   isLoadingOpenAIDebug = false;
+
+  authFullName = '';
+  authEmail = '';
+  authPassword = '';
+
   errorMessage = '';
+  authErrorMessage = '';
   usageErrorMessage = '';
   openAIDebugErrorMessage = '';
+
+  currentUser: UserSummary | null = null;
   analysisResult: AnalysisResponse | null = null;
   usageDashboard: UsageDashboard | null = null;
   openAIDebug: OpenAIDebugResponse | null = null;
 
   constructor() {
-    this.loadUsageDashboard();
+    this.restoreSession();
+  }
+
+  setAuthMode(mode: 'login' | 'register'): void {
+    this.authMode = mode;
+    this.authErrorMessage = '';
+  }
+
+  submitAuth(): void {
+    this.authErrorMessage = '';
+    this.isAuthenticating = true;
+
+    const endpoint = this.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const payload = this.authMode === 'register'
+      ? { email: this.authEmail, password: this.authPassword, fullName: this.authFullName }
+      : { email: this.authEmail, password: this.authPassword };
+
+    this.http.post<AuthResponse>(endpoint, payload).subscribe({
+      next: (response) => {
+        this.finishAuth(response);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.authErrorMessage = typeof error.error?.detail === 'string'
+          ? error.error.detail
+          : 'Nie uda\u0142o si\u0119 zalogowa\u0107.';
+        this.isAuthenticating = false;
+      }
+    });
+  }
+
+  logout(): void {
+    localStorage.removeItem(this.tokenStorageKey);
+    this.currentUser = null;
+    this.analysisResult = null;
+    this.usageDashboard = null;
+    this.openAIDebug = null;
+    this.selectedFiles = [];
+    this.errorMessage = '';
+    this.usageErrorMessage = '';
+    this.openAIDebugErrorMessage = '';
+    this.authPassword = '';
+    this.isRestoringSession = false;
   }
 
   setActiveTab(tab: 'analysis' | 'usage'): void {
     this.activeTab = tab;
-    if (tab === 'usage') {
-      if (!this.usageDashboard) {
-        this.loadUsageDashboard();
-      }
-      if (!this.openAIDebug) {
-        this.loadOpenAIDebug();
-      }
+    if (tab === 'usage' && this.currentUser) {
+      this.loadUsageDashboard();
+      this.loadOpenAIDebug();
     }
   }
 
@@ -153,6 +219,10 @@ export class AppComponent {
   }
 
   analyzeDocuments(): void {
+    if (!this.currentUser) {
+      this.authErrorMessage = 'Najpierw zaloguj si\u0119 do systemu.';
+      return;
+    }
     if (!this.selectedFiles.length) {
       this.errorMessage = 'Wybierz co najmniej jeden dokument do analizy.';
       return;
@@ -165,7 +235,7 @@ export class AppComponent {
     this.errorMessage = '';
     this.analysisResult = null;
 
-    this.http.post<AnalysisResponse>('/api/analyze', formData).subscribe({
+    this.http.post<AnalysisResponse>('/api/analyze', formData, { headers: this.authHeaders() }).subscribe({
       next: (response) => {
         this.analysisResult = response;
         this.isSubmitting = false;
@@ -173,39 +243,43 @@ export class AppComponent {
         this.loadOpenAIDebug();
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = typeof error.error?.detail === 'string'
-          ? error.error.detail
-          : 'Nie uda\u0142o si\u0119 przeanalizowa\u0107 dokument\u00f3w.';
+        this.handleProtectedError(error, 'Nie uda\u0142o si\u0119 przeanalizowa\u0107 dokument\u00f3w.');
         this.isSubmitting = false;
       }
     });
   }
 
   loadUsageDashboard(): void {
+    if (!this.currentUser) {
+      return;
+    }
     this.isLoadingUsage = true;
     this.usageErrorMessage = '';
-    this.http.get<UsageDashboard>('/api/usage').subscribe({
+    this.http.get<UsageDashboard>('/api/usage', { headers: this.authHeaders() }).subscribe({
       next: (dashboard) => {
         this.usageDashboard = dashboard;
         this.isLoadingUsage = false;
       },
-      error: () => {
-        this.usageErrorMessage = 'Nie uda\u0142o si\u0119 pobra\u0107 statystyk zu\u017cycia API.';
+      error: (error: HttpErrorResponse) => {
+        this.handleProtectedError(error, 'Nie uda\u0142o si\u0119 pobra\u0107 raportu koszt\u00f3w.');
         this.isLoadingUsage = false;
       }
     });
   }
 
   loadOpenAIDebug(): void {
+    if (!this.currentUser) {
+      return;
+    }
     this.isLoadingOpenAIDebug = true;
     this.openAIDebugErrorMessage = '';
-    this.http.get<OpenAIDebugResponse>('/api/debug/openai').subscribe({
+    this.http.get<OpenAIDebugResponse>('/api/debug/openai', { headers: this.authHeaders() }).subscribe({
       next: (response) => {
         this.openAIDebug = response;
         this.isLoadingOpenAIDebug = false;
       },
-      error: () => {
-        this.openAIDebugErrorMessage = 'Nie uda\u0142o si\u0119 pobra\u0107 diagnostyki OpenAI.';
+      error: (error: HttpErrorResponse) => {
+        this.handleProtectedError(error, 'Nie uda\u0142o si\u0119 pobra\u0107 diagnostyki OpenAI.');
         this.isLoadingOpenAIDebug = false;
       }
     });
@@ -224,5 +298,61 @@ export class AppComponent {
 
   formatTimestamp(value: string): string {
     return new Date(value).toLocaleString('pl-PL');
+  }
+
+  private restoreSession(): void {
+    const token = localStorage.getItem(this.tokenStorageKey);
+    if (!token) {
+      this.isRestoringSession = false;
+      return;
+    }
+
+    this.http.get<UserSummary>('/api/me', { headers: this.authHeaders(token) }).subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.isRestoringSession = false;
+        this.loadUsageDashboard();
+        this.loadOpenAIDebug();
+      },
+      error: () => {
+        localStorage.removeItem(this.tokenStorageKey);
+        this.isRestoringSession = false;
+      }
+    });
+  }
+
+  private finishAuth(response: AuthResponse): void {
+    localStorage.setItem(this.tokenStorageKey, response.accessToken);
+    this.currentUser = response.user;
+    this.authPassword = '';
+    this.authErrorMessage = '';
+    this.isAuthenticating = false;
+    this.isRestoringSession = false;
+    this.loadUsageDashboard();
+    this.loadOpenAIDebug();
+  }
+
+  private authHeaders(tokenOverride?: string): HttpHeaders {
+    const token = tokenOverride ?? localStorage.getItem(this.tokenStorageKey) ?? '';
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  private handleProtectedError(error: HttpErrorResponse, fallbackMessage: string): void {
+    if (error.status === 401) {
+      this.logout();
+      this.authErrorMessage = 'Sesja wygas\u0142a. Zaloguj si\u0119 ponownie.';
+      return;
+    }
+
+    const detail = typeof error.error?.detail === 'string' ? error.error.detail : fallbackMessage;
+    if (fallbackMessage.includes('raportu koszt')) {
+      this.usageErrorMessage = detail;
+      return;
+    }
+    if (fallbackMessage.includes('diagnostyki OpenAI')) {
+      this.openAIDebugErrorMessage = detail;
+      return;
+    }
+    this.errorMessage = detail;
   }
 }

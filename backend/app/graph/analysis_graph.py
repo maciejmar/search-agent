@@ -1,20 +1,23 @@
 import logging
-from datetime import datetime, timezone
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
+from sqlalchemy.orm import Session
 
-from app.schemas import AnalysisResponse, GlobalIssue, UploadedDocument, UsageRun, UsageSummary
+from app.models import User
+from app.schemas import AnalysisResponse, GlobalIssue, UploadedDocument, UsageSummary
 from app.services.document_reader import ExtractedDocument
 from app.services.notary_analysis import analyze_documents as analyze_documents_heuristically
 from app.services.openai_analysis import analyze_documents_with_openai, is_openai_configured, summarize_openai_error
-from app.services.usage_tracker import usage_tracker
+from app.services.usage_reporting import record_usage_run
 
 logger = logging.getLogger(__name__)
 
 
 class AnalysisState(TypedDict):
     documents: list[ExtractedDocument]
+    user: User
+    db: Session
     response: AnalysisResponse | None
 
 
@@ -22,7 +25,7 @@ class AnalysisState(TypedDict):
 def run_analysis(state: AnalysisState) -> AnalysisState:
     analysis_mode = 'openai'
     status = 'success'
-    error: Exception | None = None
+    fallback_reason: str | None = None
     usage = UsageSummary(provider='local', mode='heuristic_fallback', model='heuristic-fallback')
 
     try:
@@ -30,17 +33,16 @@ def run_analysis(state: AnalysisState) -> AnalysisState:
             raise RuntimeError('OPENAI_API_KEY is not configured')
         parties, global_issues, usage = analyze_documents_with_openai(state['documents'])
     except Exception as raised_error:
-        error = raised_error
         analysis_mode = 'heuristic_fallback'
         status = 'fallback'
-        reason = summarize_openai_error(raised_error)
-        logger.exception('OpenAI analysis failed; using heuristic fallback. reason=%s', reason)
+        fallback_reason = summarize_openai_error(raised_error)
+        logger.exception('OpenAI analysis failed; using heuristic fallback. reason=%s', fallback_reason)
         parties, global_issues = analyze_documents_heuristically(state['documents'])
         global_issues.insert(
             0,
             GlobalIssue(
                 severity='warning',
-                message=f'Analiza OpenAI API by\u0142a niedost\u0119pna, u\u017cyto fallbacku heurystycznego. Pow\u00f3d: {reason}.',
+                message=f'Analiza OpenAI API by\u0142a niedost\u0119pna, u\u017cyto fallbacku heurystycznego. Pow\u00f3d: {fallback_reason}.',
                 documents=[document.name for document in state['documents']],
             ),
         )
@@ -63,26 +65,34 @@ def run_analysis(state: AnalysisState) -> AnalysisState:
         summary=_build_summary(uploaded_documents, parties, analysis_mode),
         usage=usage,
     )
-    _record_usage_run(uploaded_documents, usage, status, error)
-    return {'documents': state['documents'], 'response': response}
+    _record_usage_run(state['db'], state['user'], uploaded_documents, usage, status, fallback_reason)
+    return {'documents': state['documents'], 'user': state['user'], 'db': state['db'], 'response': response}
 
 
 
-def _record_usage_run(documents: list[UploadedDocument], usage: UsageSummary, status: str, error: Exception | None) -> None:
-    run = UsageRun(
-        timestamp=datetime.now(timezone.utc).isoformat(),
+def _record_usage_run(
+    db: Session,
+    user: User,
+    documents: list[UploadedDocument],
+    usage: UsageSummary,
+    status: str,
+    fallback_reason: str | None,
+) -> None:
+    record_usage_run(
+        db,
+        user,
         provider=usage.provider,
         mode=usage.mode,
         model=usage.model,
-        documentNames=[document.fileName for document in documents],
-        inputTokens=usage.inputTokens,
-        outputTokens=usage.outputTokens,
-        totalTokens=usage.totalTokens,
-        cachedInputTokens=usage.cachedInputTokens,
-        estimatedCostUsd=usage.estimatedCostUsd,
-        status='error' if error and status != 'fallback' else status,
+        document_names=[document.fileName for document in documents],
+        input_tokens=usage.inputTokens,
+        output_tokens=usage.outputTokens,
+        total_tokens=usage.totalTokens,
+        cached_input_tokens=usage.cachedInputTokens,
+        estimated_cost_usd=usage.estimatedCostUsd,
+        status=status,
+        fallback_reason=fallback_reason,
     )
-    usage_tracker.record_run(run)
 
 
 
@@ -94,7 +104,7 @@ def _build_summary(documents: list[UploadedDocument], parties, analysis_mode: st
     inconsistent = sum(1 for party in parties if party.issues)
     if inconsistent:
         return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Wykryto niesp\u00f3jno\u015bci dla {inconsistent} stron.'
-    return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Nie wykryto niesp\u00f3jno\u015bci w znalezionych danych stron.'
+    return f'Przeanalizowano {len(documents)} plik(i) przez {source_label}. Nie wykryto niesp\u00f3jno\u015bci w znalezionych danych stron aktu prawnego.'
 
 
 
@@ -110,6 +120,6 @@ analysis_graph = build_graph()
 
 
 
-def analyze_with_graph(documents: list[ExtractedDocument]) -> AnalysisResponse:
-    state = analysis_graph.invoke({'documents': documents, 'response': None})
+def analyze_with_graph(documents: list[ExtractedDocument], user: User, db: Session) -> AnalysisResponse:
+    state = analysis_graph.invoke({'documents': documents, 'user': user, 'db': db, 'response': None})
     return state['response']

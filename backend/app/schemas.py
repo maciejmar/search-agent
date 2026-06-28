@@ -1,10 +1,31 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class StrictSchemaModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
+
+
+class UserSummary(StrictSchemaModel):
+    id: int
+    email: EmailStr
+    fullName: str
+
+
+class AuthRequest(StrictSchemaModel):
+    email: EmailStr
+    password: str
+
+
+class RegisterRequest(AuthRequest):
+    fullName: str
+
+
+class AuthResponse(StrictSchemaModel):
+    accessToken: str
+    tokenType: Literal['bearer'] = 'bearer'
+    user: UserSummary
 
 
 class UploadedDocument(StrictSchemaModel):
@@ -68,6 +89,8 @@ class UsageRun(StrictSchemaModel):
     provider: Literal['openai', 'local']
     mode: str
     model: str
+    requesterName: str
+    requesterEmail: EmailStr
     documentNames: list[str] = Field(default_factory=list)
     inputTokens: int = 0
     outputTokens: int = 0
@@ -75,6 +98,7 @@ class UsageRun(StrictSchemaModel):
     cachedInputTokens: int = 0
     estimatedCostUsd: float = 0.0
     status: Literal['success', 'fallback', 'error']
+    fallbackReason: str | None = None
 
 
 class UsageTotals(StrictSchemaModel):
@@ -87,6 +111,7 @@ class UsageTotals(StrictSchemaModel):
 
 
 class UsageDashboard(StrictSchemaModel):
+    user: UserSummary
     totals: UsageTotals
     recentRuns: list[UsageRun]
 
