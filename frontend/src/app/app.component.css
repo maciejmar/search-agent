@@ -46,7 +46,7 @@
 
 .eyebrow {
   margin: 0 0 10px;
-  color: #b8b7c0;
+  color: #bdb7c0;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -98,7 +98,7 @@ h1 {
 
 .tab-button--active {
   background: linear-gradient(135deg, #3f7c2d 0%, #79aa43 100%);
-  border-color: #4a8d33;
+  border-color: #56338d;
   color: #ffffff;
 }
 
