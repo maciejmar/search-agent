@@ -184,9 +184,10 @@ export class AppComponent {
         this.finishAuth(response);
       },
       error: (error: HttpErrorResponse) => {
-        this.authErrorMessage = typeof error.error?.detail === 'string'
-          ? error.error.detail
-          : 'Nie uda\u0142o si\u0119 zalogowa\u0107.';
+        this.authErrorMessage = this.extractApiErrorMessage(
+          error,
+          this.authMode === 'register' ? 'Nie uda\u0142o si\u0119 utworzy\u0107 konta.' : 'Nie uda\u0142o si\u0119 zalogowa\u0107.'
+        );
         this.isAuthenticating = false;
       }
     });
@@ -361,7 +362,7 @@ export class AppComponent {
       return;
     }
 
-    const detail = typeof error.error?.detail === 'string' ? error.error.detail : fallbackMessage;
+    const detail = this.extractApiErrorMessage(error, fallbackMessage);
     if (fallbackMessage.includes('raportu koszt')) {
       this.usageErrorMessage = detail;
       return;
@@ -371,5 +372,29 @@ export class AppComponent {
       return;
     }
     this.errorMessage = detail;
+  }
+
+  private extractApiErrorMessage(error: HttpErrorResponse, fallbackMessage: string): string {
+    const detail = error.error?.detail;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+
+    if (Array.isArray(detail) && detail.length) {
+      return detail
+        .map((item) => {
+          const location = Array.isArray(item?.loc) ? item.loc.join(' -> ') : 'request';
+          const message = typeof item?.msg === 'string' ? item.msg : 'Nieprawid\u0142owe dane wej\u015bciowe.';
+          return `${location}: ${message}`;
+        })
+        .join(' | ');
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    return fallbackMessage;
   }
 }
